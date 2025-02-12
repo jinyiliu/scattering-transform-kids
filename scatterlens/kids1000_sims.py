@@ -2,9 +2,9 @@ import os
 import numpy as np
 from numpy.typing import NDArray
 
-data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
+_data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
 
-zbin_to_ShapeNoise = {
+_zbin_to_ShapeNoise = {
     1: 0.270,
     2: 0.258,
     3: 0.273,
@@ -12,7 +12,7 @@ zbin_to_ShapeNoise = {
     5: 0.270,
 }
 
-zbin_to_zrange = {
+_zbin_to_zrange = {
     1: "0.1-0.3",
     2: "0.3-0.5",
     3: "0.5-0.7",
@@ -32,15 +32,14 @@ def _has_zbin(zbin: int) -> bool:
     return isinstance(zbin, int) and 1 <= zbin <= 5
 
 class CosmoSLICE:
-    def __init__(self):
-        self.resol = 2.344  # pixel resolution
-        self.resol_unit = "arcmin"
-        self.simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmol{:d}"
-        self.simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
-        self.mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
+    resol = 2.344
+    resol_unit = "arcmin"
+    simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmol{:d}"
+    simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
+    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
 
+    @staticmethod
     def get_sim_massmap(
-            self,
             cosmol: int,
             zbin1: int,
             zbin2: int,
@@ -52,35 +51,35 @@ class CosmoSLICE:
             and _has_region(region)
             and _has_zbin(zbin1)
             and _has_zbin(zbin2)
-            and self._has_LOS(LOS)
+            and CosmoSLICE._has_LOS(LOS)
         ), "Validation failed for one or more inputs."
 
-        shapenoise = zbin_to_ShapeNoise[zbin1]
-        zbcut = f"ZBcut{zbin_to_zrange[zbin1]}"
-        zbcut += f"_X_ZBcut{zbin_to_zrange[zbin2]}" if zbin2!=zbin1 else ""
+        shapenoise = _zbin_to_ShapeNoise[zbin1]
+        zbcut = f"ZBcut{_zbin_to_zrange[zbin1]}"
+        zbcut += f"_X_ZBcut{_zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
 
         if cosmol==-1:
-            simspath = self.simspath_fid.format(shapenoise, zbcut)
+            simspath = CosmoSLICE.simspath_fid.format(shapenoise, zbcut)
         else:
-            simspath = self.simspath.format(shapenoise, zbcut, cosmol)
+            simspath = CosmoSLICE.simspath.format(shapenoise, zbcut, cosmol)
 
         massmap = np.load(
             os.path.join(
-                data_path, simspath,
-                self.mapfname.format(shapenoise, LOS, region),
+                _data_path, simspath,
+                CosmoSLICE.mapfname.format(shapenoise, LOS, region),
             )
         )
         return massmap
 
+    @staticmethod
     def get_fid_massmap(
-            self,
             zbin1: int,
             zbin2: int,
             LOS: int,
             region: int,
     ) -> NDArray:
-        massmap = self.get_sim_massmap(cosmol=-1, zbin1=zbin1, zbin2=zbin2,
-            LOS=LOS, region=region)
+        massmap = CosmoSLICE.get_sim_massmap(cosmol=-1, zbin1=zbin1,
+            zbin2=zbin2, LOS=LOS, region=region)
         return massmap
 
     @staticmethod
@@ -90,9 +89,7 @@ class CosmoSLICE:
 
 
 class SLICE:
-    def __init__(self):
-        pass
-
+    @staticmethod
     def get_sim_kappa(self, region):
         pass
 
