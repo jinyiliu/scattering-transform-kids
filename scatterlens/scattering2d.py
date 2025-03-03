@@ -52,13 +52,12 @@ class Scattering2D(object):
         self.phi = filter_bank["phi"]
 
         if downsample_algo:
-            self.psi = []
+            self.psi = [] # list of torch.Tensor
             for j in range(J):
                 _psi = _subsample_fourier(filter_bank["psi"][j], M=M, N=N, j=j)
                 self.psi.append(_psi)
         else:
-            for j in range(J):
-                self.psi = filter_bank["psi"]
+            self.psi = filter_bank["psi"] # torch.Tensor
 
         self.M = M
         self.N = N
@@ -68,7 +67,7 @@ class Scattering2D(object):
 
     def scattering(
             self, images: torch.Tensor | NDArray, large_batch: bool=False,
-            mask: torch.Tensor | NDArray=None, ):
+            mask: torch.Tensor | NDArray | None=None, ):
         """Docstring.
 
         Args:
@@ -90,24 +89,7 @@ class Scattering2D(object):
         if isinstance(images, np.ndarray):
             images = torch.from_numpy(images)
 
-        if mask is not None:
-            if isinstance(mask, np.ndarray):
-                mask = torch.from_numpy(mask)
-                mask = mask.to(dtype=self.dtype)
-            assert mask.dim() in (2, 3)
-            if mask.dim() == 2:
-                assert mask.shape == (M, N)
-                mask = mask[None, :, :]
-        else:
-            mask = 1.
-
-        mask_bank = []
-        if self.downsample_algo:
-            for j in range(J):
-                _M, _N = self.psi[j].shape[-2:]
-                mask_bank.append(_binary_mask_subsample(mask, size=[_M, _N]))
-        else:
-            mask_bank = [mask] * J
+        mask_bank = self._generate_mask_bank(mask=mask)
 
         S0 = torch.zeros((num_images, 1), dtype=self.dtype)
         S1 = torch.zeros((num_images, J, L), dtype=self.dtype)
@@ -154,12 +136,45 @@ class Scattering2D(object):
                             _images_f[:, :, None, :, :] * self.psi[j2][None, None, :, :, :],
                             dim=(-2, -1),
                         ).abs()
-                        I2 *= (M2 * N2) / (M * N)
+                        I2 *= (M2 * N2) / (M1 * N1)
                         S2[:, j1, j2, :, :] = torch.sum(I2 * mask, dim=(-2, -1)) / mask.sum()
         else:
             raise NotImplementedError
 
         return {"S0": S0, "S1": S1, "S2": S2, "I1": I1_SET}
+
+
+    def _generate_mask_bank(self, mask:torch.Tensor | NDArray | None=None):
+        if mask is not None:
+            if isinstance(mask, np.ndarray):
+                mask = torch.from_numpy(mask)
+                mask = mask.to(dtype=self.dtype)
+
+            assert mask.dim() in (2, 3)
+
+            if mask.dim() == 2:
+                assert mask.shape == (self.M, self.N)
+                mask = mask[None, :, :]
+            mask_bank = []
+
+            if self.downsample_algo:
+                for j in range(self.J):
+                    _M, _N = self.psi[j].shape[-2:]
+                    mask_bank.append(
+                        _binary_mask_subsample(mask, size=[_M, _N]))
+        else:
+            mask = torch.ones((1, self.M, self.N), dtype=self.dtype)
+
+            if self.downsample_algo:
+                mask_bank = []
+                for j in range(self.J):
+                    _M, _N = self.psi[j].shape[-2:]
+                    mask_bank.append(
+                        torch.ones((1, _M, _N), dtype=self.dtype))
+            else:
+                mask_bank = [mask] * self.J
+
+        return mask_bank
 
 
 
