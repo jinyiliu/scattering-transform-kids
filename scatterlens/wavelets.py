@@ -16,7 +16,7 @@ class Wavelet2D(object):
     def gen_filter_bank(
             self, dtype: torch.dtype, savedir: str | os.PathLike | None=None,
             overwrite=False):
-        """ Define the funtion in child class. """
+        """Define the funtion in child class."""
         raise NotImplementedError
 
 
@@ -32,7 +32,7 @@ class Morlet2D(Wavelet2D):
         pass
 
     def morlet_2d(self, j: int, l: int) -> NDArray[np.complex64]:
-        """ Return the 2D profile of the Morlet wavelet in real space. """
+        """Return the 2D profile of the Morlet wavelet in real space."""
         psi = filter_bank.morlet_2d(
             M=self.M,
             N=self.N,
@@ -59,7 +59,7 @@ class Morlet2D(Wavelet2D):
     def gen_filter_bank(
             self, dtype: torch.dtype, savedir: str | os.PathLike | None=None,
             overwrite=False) -> dict[str, torch.Tensor]:
-        """ Generate filter bank in Fourier space. """
+        """Generate filter bank in Fourier space."""
         if not dtype in (torch.float32, torch.float64):
             raise AssertionError("dtype must be torch.float32 or torch.float64")
 
@@ -97,21 +97,19 @@ class Morlet2D(Wavelet2D):
 
     @staticmethod
     def sigma(j):
-        """ Sigma of the Gaussian envelope in pixels. """
+        """Sigma of the Gaussian envelope in pixels."""
         base_value: float = 0.8
         return base_value * Wavelet2D.dilation(j)
 
     @staticmethod
     def k0(j):
-        """ Central frequency of the Morlet wavelet with unit per pixel. """
+        """Central frequency of the Morlet wavelet with unit per pixel."""
         base_value: float = 3. / 4. * np.pi
         return base_value / Wavelet2D.dilation(j)
 
     @staticmethod
     def j2scale(j, pixel_length):
-        """ Convert j to angular scale in arcmin.
-            The parameter pixel_length is arcmin.
-        """
+        """Convert `j` to angular scale with the same unit as `pixel_length`."""
         return pixel_length / Morlet2D.k0(j) * 2
 
 
