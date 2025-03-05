@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
@@ -96,3 +97,14 @@ class SLICE:
     @staticmethod
     def _has_LOS(LOS: int) -> bool:
         pass
+
+
+def _read_cosmologies_info():
+    fname = os.path.join(os.path.dirname(__file__), "data", "kids1000_cosmol.csv")
+    df = pd.read_csv(
+        fname, delimiter='\t', skiprows=1,
+        names=['id', 'Omega_m', 'S_8', 'h', 'w_0', 'sigma_8', 'Omega_cdm'],
+    )
+    return df
+
+cosmologies = _read_cosmologies_info()
