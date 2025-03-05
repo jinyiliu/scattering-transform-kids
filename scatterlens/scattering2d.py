@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 from torch.fft import fft2, ifft2
@@ -12,7 +13,8 @@ class Scattering2D(object):
     def __init__(
             self, M: int, N: int, J: int, L: int, device="cpu",
             filter_bank: dict[str, torch.Tensor] | str | None=None,
-            dtype: torch.dtype=torch.float64, downsample_algo: bool=True):
+            dtype: torch.dtype=torch.float64, downsample_algo: bool=True,
+            return_I1: bool=False,):
         """Docstring.
 
         Args:
@@ -20,13 +22,17 @@ class Scattering2D(object):
             N:
             J:
             L:
-            filter_bank
+            filter_bank: The selected wavelets to be used for scattering.
+                If str, will load the filter_bank using `torch.load`. The dict
+                contain two keys: `psi` and `phi`. `psi` corresponds to a
+                `torch.Tensor` object with size [J, L, M, N].
             dtype:
             downsample_algo: If True, the j-th scattered image will be
                 subsampled to approximately (M / 2**j, N / 2**j). Scattering
                 coefficients will be calculated from these downsample images.
                 Defaults to False.
-
+            return_I1: If True, the `scattering` method will return the
+                first-order scattering maps after averaging over orientations.
         """
         assert device in ("cpu", "cuda"), "Device must be cpu or cuda."
 
@@ -36,12 +42,16 @@ class Scattering2D(object):
 
         self.dtype = dtype
         self.downsample_algo = downsample_algo
+        self.return_I1 = return_I1
 
         match filter_bank:
             case None:
                 filter_bank = Morlet2D(M, N, J, L).gen_filter_bank(dtype=dtype)
             case str():
-                raise NotImplementedError
+                if os.path.exists(filter_bank):
+                    filter_bank = torch.load(filter_bank, weights_only=True)
+                else:
+                    raise FileNotFoundError(filter_bank)
             case dict():
                 assert filter_bank["psi"].shape[:2] == (5, 4)
                 assert filter_bank["psi"].dtype == self.dtype
@@ -67,7 +77,8 @@ class Scattering2D(object):
 
     def scattering(
             self, images: torch.Tensor | NDArray, large_batch: bool=False,
-            mask: torch.Tensor | NDArray | None=None, ):
+            mask: torch.Tensor | NDArray | None=None,
+            savepath: os.PathLike | str | None=None,):
         """Docstring.
 
         Args:
@@ -75,19 +86,20 @@ class Scattering2D(object):
             large_batch:
             mask: A mask for the images where `mask = 1` indicates that the
                 pixel is included in the calculation.
+            savepath: Path to save the computed scattering coefficients.
 
         Returns:
             A dict of scattering coefficients.
         """
         M, N, J, L = self.M, self.N, self.J, self.L
+        if isinstance(images, np.ndarray):
+            images = torch.from_numpy(images)
+
         if images.dim() == 2:
             images = images[None, :, :]
         else:
             assert images.dim() == 3
         num_images = images.shape[0]
-
-        if isinstance(images, np.ndarray):
-            images = torch.from_numpy(images)
 
         mask_bank = self._generate_mask_bank(mask=mask)
 
@@ -141,7 +153,14 @@ class Scattering2D(object):
         else:
             raise NotImplementedError
 
-        return {"S0": S0, "S1": S1, "S2": S2, "I1": I1_SET}
+        if self.return_I1:
+            return {"S0": S0, "S1": S1, "S2": S2, "I1": I1_SET}
+        else:
+            ret = {"S0": S0, "S1": S1, "S2": S2}
+            if savepath:
+                torch.save(ret, savepath)
+            else:
+                return ret
 
 
     def _generate_mask_bank(self, mask:torch.Tensor | NDArray | None=None):
@@ -162,6 +181,8 @@ class Scattering2D(object):
                     _M, _N = self.psi[j].shape[-2:]
                     mask_bank.append(
                         _binary_mask_subsample(mask, size=[_M, _N]))
+            else:
+                mask_bank = [mask] * self.J
         else:
             mask = torch.ones((1, self.M, self.N), dtype=self.dtype)
 
