@@ -131,10 +131,11 @@ class Scattering2D(object):
                     ).abs()
                 I1 *= (M1 * N1) / (M * N)
                 S1[:, j1] = torch.sum(I1 * mask, dim=(-2, -1)) / mask.sum()
-
-                I1_SET.append(I1.mean(dim=1) * mask)
-
                 I1_f = fft2(I1)
+                if self.return_I1:
+                    I1_SET.append(I1.mean(dim=1) * mask)
+                del I1
+
                 for j2 in range(J):
                     if j2 >= j1:
                         if self.downsample_algo:
@@ -150,6 +151,7 @@ class Scattering2D(object):
                         ).abs()
                         I2 *= (M2 * N2) / (M1 * N1)
                         S2[:, j1, j2, :, :] = torch.sum(I2 * mask, dim=(-2, -1)) / mask.sum()
+                        del I2
         else:
             raise NotImplementedError
 
