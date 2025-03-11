@@ -77,7 +77,7 @@ class Scattering2D(object):
 
     def scattering(
             self, images: torch.Tensor | NDArray, large_batch: bool=False,
-            mask: torch.Tensor | NDArray | None=None,
+            mask: torch.Tensor | NDArray | os.PathLike | str | None=None,
             savepath: os.PathLike | str | None=None,):
         """Docstring.
 
@@ -165,12 +165,22 @@ class Scattering2D(object):
                 return ret
 
 
-    def _generate_mask_bank(self, mask:torch.Tensor | NDArray | None=None):
+    def _generate_mask_bank(
+            self, mask:torch.Tensor | NDArray | os.PathLike | str | None=None):
         if mask is not None:
+            if isinstance(mask, str):
+                if mask.endswith(".pt"):
+                    mask = torch.load(mask, weights_only=True)
+                elif mask.endswith(".npy"):
+                    mask = np.load(mask)
+                else:
+                    raise NotImplementedError
+
             if isinstance(mask, np.ndarray):
                 mask = torch.from_numpy(mask)
-                mask = mask.to(dtype=self.dtype)
 
+            if mask.dtype != self.dtype:
+                mask = mask.to(dtype=self.dtype)
             assert mask.dim() in (2, 3)
 
             if mask.dim() == 2:

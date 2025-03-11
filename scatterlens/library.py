@@ -33,6 +33,7 @@ class CosmolStLibrary:
             self,
             libdir: os.PathLike | str,
             filterlib=None,
+            masklib=None,
             sims=None,
             **kwargs):
         """Library to store the calculated coefficients for different
@@ -40,6 +41,10 @@ class CosmolStLibrary:
 
         Args:
             libdir: Directory to store the calculated coefficients.
+            filterlib: The scatterlens.library.FilterLibrary instance. If None,
+                will calculate the filters on the fly.
+            masklib: The scatterlens.library.MaskLibrary instance. If None, will
+                calculate the mask on the fly.
             sims: Simulation class.
             **kwargs: The keyword arguments for initialising Scattering2D.
         """
@@ -49,6 +54,7 @@ class CosmolStLibrary:
 
         if sims is not None:
             self.sims = sims
+            self.masklib = masklib
             assert hasattr(sims, "get_sim_massmap")
             assert callable(sims.get_sim_massmap)
             assert hasattr(sims, "LOS_indices")
@@ -98,7 +104,10 @@ class CosmolStLibrary:
                 cosmol=cosmol, zbin1=zbin1, zbin2=zbin2, LOS=LOS, region=region)
             images[i] = torch.from_numpy(mass)
 
-        mask = images[0] != 0.
+        if self.masklib:
+            mask = self.masklib.get_savepath(region=region)
+        else:
+            mask = images[0] != 0.
 
         self.ST[region].scattering(images, mask=mask, savepath=savepath)
 
@@ -129,6 +138,7 @@ class FilterLibrary:
             self, libdir: os.PathLike | str,
             J: int | None=None, L: int | None=None, dtype: torch.dtype | None=None,
             region_MN: dict[int, tuple[int, int]] | None=None):
+        """Library to store the filters in different regions."""
         self.libdir = libdir
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
@@ -163,9 +173,41 @@ class FilterLibrary:
 
 
 class MaskLibrary:
-    def __init__(self):
-        pass
+    def __init__(
+            self, libdir: os.PathLike | str,
+            dtype: torch.dtype | None=None,
+            sims=None,
+            pixel_length: float | None=None,):
+        """Library to store the masks for different regions."""
+        self.libdir = libdir
+        if not os.path.exists(self.libdir):
+            os.makedirs(self.libdir)
 
-    def get_mask(self):
-        """Return filter_bank according to the region index."""
-        pass
+        if sims is not None:
+            assert hasattr(sims, "get_fid_massmap")
+            assert callable(sims.get_fid_massmap)
+            assert hasattr(sims, "region_MN")
+
+            self.fname = "Mask_R{}_M{}N{}.pt"
+
+            for region in sims.region_MN.keys():
+                mass = sims.get_fid_massmap(zbin1=1, zbin2=1, LOS=1, region=region)
+                mask = mass != 0.
+                mask = torch.from_numpy(mask[None, :, :])
+                if mask.dtype != dtype:
+                    mask = mask.to(dtype)
+                torch.save(mask, os.path.join(
+                    libdir, self.fname.format(region, *sims.region_MN[region]))
+                )
+
+
+    def get_savepath(self, region: int):
+        pathname = f"*_R{region}_*.pt"
+        matched = glob(pathname=pathname, root_dir=self.libdir)
+        if not matched:
+            raise FileNotFoundError
+        else:
+            fname = matched[0]
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
