@@ -1,7 +1,7 @@
 import os
 import torch
 from glob import glob
-from typing import Type
+from typing import Sequence
 
 from scatterlens.scattering2d import Scattering2D
 from scatterlens.wavelets import Morlet2D
@@ -88,7 +88,7 @@ class CosmolStLibrary:
 
     def calc_sim_scoef(
             self, cosmol: int, zbin1: int, zbin2: int, region: int):
-        """Return the scattering coefficients according to the given region,
+        """Calculate the scattering coefficients according to the given region,
         cosmology, and redshift bins."""
         if not hasattr(self, "sims"):
             raise AttributeError
@@ -112,18 +112,65 @@ class CosmolStLibrary:
         self.ST[region].scattering(images, mask=mask, savepath=savepath)
 
 
-    def get_sim_scoef(self):
-        pass
+    def get_sim_scoef(
+            self,
+            cosmol: int | str,
+            zbin1: int,
+            zbin2: int,
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+    ):
+        """Return the scattering coefficients according to the given region,
+        cosmology, redshift bins, and LOS."""
+        st_paths = []
+        if region:
+            if isinstance(region, int):
+                region = [region]
+            for region_i in region:
+                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, region_i))
+        else:
+            pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
+                "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
+            st_paths = glob(pathname=pathname, root_dir=self.libdir)
 
-    def get_fid_scoef(self):
-        pass
+        if LOS:
+            if isinstance(LOS, int):
+                LOS = [LOS]
+            LOS_indices = [ LOS_i - 1 for LOS_i in LOS ]
+        else:
+            LOS_indices = slice(None)
 
-    def get_sim_stats_scoef(self):
-        pass
+        coef = torch.load(st_paths[0], weights_only=True)
 
-    def get_fid_stats_scoef(self):
-        pass
+        J, L = coef["S1"].shape[-2:]
+        S0 = torch.zeros(size=(1, ))
+        S1 = torch.zeros(size=(J, L))
+        S2 = torch.zeros(size=(J, J, L, L))
 
+        for st_path in st_paths:
+            coef = torch.load(st_path, weights_only=True)
+            S0 += coef["S0"][LOS_indices].mean(dim=0)
+            S1 += coef["S1"][LOS_indices].mean(dim=0)
+            S2 += coef["S2"][LOS_indices].mean(dim=0)
+
+        S0 /= len(st_paths)
+        S1 /= len(st_paths)
+        S2 /= len(st_paths)
+
+        coef = {"S0": S0, "S1": S1, "S2": S2}
+
+        return coef
+
+
+    def get_fid_scoef(
+            self,
+            zbin1: int,
+            zbin2: int,
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+    ):
+        return self.get_sim_scoef(
+            cosmol="fid", zbin1=zbin1, zbin2=zbin2, region=region, LOS=LOS)
 
 
 
