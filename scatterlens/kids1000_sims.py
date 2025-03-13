@@ -8,6 +8,9 @@ _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/
 class KiDS1000:
     resol = 2.344
     resol_unit = "arcmin"
+    LOS_indices = list(range(1, 51))
+    region_indices = list(range(1, 19))
+    zbin_indices = list(range(1, 6))
     zbin_to_ShapeNoise = {
         1: 0.270,
         2: 0.258,
@@ -56,7 +59,7 @@ class CosmoSLICE(KiDS1000):
     simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmol{:d}"
     simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
-    LOS_indices = list(range(1, 51))
+    cosmol_indices = list(range(-1, 25))
     simsname = "KiDS1000_CosmoSLICE"
 
     @staticmethod
