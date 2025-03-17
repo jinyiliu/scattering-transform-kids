@@ -8,7 +8,6 @@ _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/
 class KiDS1000:
     resol = 2.344
     resol_unit = "arcmin"
-    LOS_indices = list(range(1, 51))
     region_indices = list(range(1, 19))
     zbin_indices = list(range(0, 6))
     zbin_to_ShapeNoise = {
@@ -70,11 +69,12 @@ class KiDS1000:
 
 
 class CosmoSLICE(KiDS1000):
+    simsname = "KiDS1000_CosmoSLICE"
     simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmol{:d}"
     simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
     cosmol_indices = list(range(-1, 25))
-    simsname = "KiDS1000_CosmoSLICE"
+    LOS_indices = list(range(1, 51))
 
     @staticmethod
     def get_sim_massmap(
@@ -130,18 +130,60 @@ class CosmoSLICE(KiDS1000):
         # -1 points to fiducial cosmology
         return -1 <= cosmol <= 24
 
+    @staticmethod
+    def cosmology_info(cosmol: int | str | None=None):
+        if cosmol:
+            if isinstance(cosmol, str):
+                assert cosmol == "fid"
+                return _cosmologies.loc[25]
+
+            if isinstance(cosmol, int):
+                assert CosmoSLICE.has_cosmol(cosmol)
+                if cosmol == -1:
+                    return _cosmologies.loc[25]
+                else:
+                    return _cosmologies.loc[cosmol]
+        else:
+            return _cosmologies.loc[:25]
 
 
 class SLICE(KiDS1000):
     simsname = "KiDS1000_SLICE"
+    simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}"
+    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
+    LOS_indices = list(range(74, 293))
+    LOS_indices.pop(198 - 74) # LOS198 & LOS199 are corrupted
+    LOS_indices.pop(198 - 74)
 
     @staticmethod
-    def get_sim_massmap(region):
-        pass
+    def get_sim_massmap(region: int, zbin1: int, zbin2: int, LOS: int) -> NDArray:
+        assert (
+            KiDS1000.has_region(region)
+            and KiDS1000.has_zbin(zbin1)
+            and KiDS1000.has_zbin(zbin2)
+            and SLICE.has_LOS(LOS)
+        ), "Validation failed for one or more inputs."
+        shapenoise = KiDS1000.zbin_to_ShapeNoise[zbin1]
+        zbcut = f"ZBcut{KiDS1000.zbin_to_zrange[zbin1]}"
+        zbcut += f"_X_ZBcut{KiDS1000.zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
+
+        simspath = SLICE.simspath.format(shapenoise, zbcut)
+
+        massmap = np.load(
+            os.path.join(
+                _data_path, simspath,
+                SLICE.mapfname.format(shapenoise, LOS, region),
+            )
+        )
+        return massmap
 
     @staticmethod
     def has_LOS(LOS: int) -> bool:
-        pass
+        return 74 <= LOS <= 292 and not LOS in (198, 199)
+
+    @staticmethod
+    def cosmology_info():
+        return _cosmologies.loc[26]
 
 
 def _read_cosmologies_info() -> pd.DataFrame:
@@ -152,4 +194,4 @@ def _read_cosmologies_info() -> pd.DataFrame:
     )
     return df
 
-cosmologies = _read_cosmologies_info()
+_cosmologies = _read_cosmologies_info()
