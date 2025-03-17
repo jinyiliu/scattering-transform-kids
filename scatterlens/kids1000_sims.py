@@ -10,8 +10,9 @@ class KiDS1000:
     resol_unit = "arcmin"
     LOS_indices = list(range(1, 51))
     region_indices = list(range(1, 19))
-    zbin_indices = list(range(1, 6))
+    zbin_indices = list(range(0, 6))
     zbin_to_ShapeNoise = {
+        0: 0.265,
         1: 0.270,
         2: 0.258,
         3: 0.273,
@@ -19,6 +20,7 @@ class KiDS1000:
         5: 0.270,
     }
     zbin_to_zrange = {
+        0: "0.1-1.2",
         1: "0.1-0.3",
         2: "0.3-0.5",
         3: "0.5-0.7",
@@ -46,13 +48,25 @@ class KiDS1000:
         18: (224, 159),
     }
 
+    cross_zbins: list[tuple[int, int]] = []
+    for zbin1 in zbin_indices:
+        for zbin2 in zbin_indices:
+            if zbin1 == 0:
+                if zbin2 == 0:
+                    cross_zbins.append((zbin1, zbin2))
+                else:
+                    continue
+            else:
+                if zbin2 >= zbin1:
+                    cross_zbins.append((zbin1, zbin2))
+
     @staticmethod
     def has_region(region: int) -> bool:
         return 1 <= region <= 18
 
     @staticmethod
     def has_zbin(zbin: int) -> bool:
-        return isinstance(zbin, int) and 1 <= zbin <= 5
+        return isinstance(zbin, int) and 0 <= zbin <= 5
 
 
 class CosmoSLICE(KiDS1000):
