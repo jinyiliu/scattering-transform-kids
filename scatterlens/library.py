@@ -119,9 +119,18 @@ class CosmolStLibrary:
             zbin2: int,
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            return_type: str="sequence",
     ):
         """Return the scattering coefficients according to the given region,
         cosmology, redshift bins, and LOS."""
+        assert return_type in ("sequence", "dict")
+        assert zbin2 >= zbin1
+
         st_paths = []
         if region:
             if isinstance(region, int):
@@ -132,6 +141,8 @@ class CosmolStLibrary:
             pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
                 "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
             st_paths = glob(pathname=pathname, root_dir=self.libdir)
+            if len(st_paths) == 0:
+                raise FileNotFoundError
 
         if LOS:
             if isinstance(LOS, int):
@@ -140,7 +151,8 @@ class CosmolStLibrary:
         else:
             LOS_indices = slice(None)
 
-        coef = torch.load(st_paths[0], weights_only=True)
+        coef = torch.load(
+            os.path.join(self.libdir, st_paths[0]), weights_only=True)
 
         J, L = coef["S1"].shape[-2:]
         S0 = torch.zeros(size=(1, ))
@@ -148,7 +160,8 @@ class CosmolStLibrary:
         S2 = torch.zeros(size=(J, J, L, L))
 
         for st_path in st_paths:
-            coef = torch.load(st_path, weights_only=True)
+            coef = torch.load(
+                os.path.join(self.libdir, st_paths[0]), weights_only=True)
             S0 += coef["S0"][LOS_indices].mean(dim=0)
             S1 += coef["S1"][LOS_indices].mean(dim=0)
             S2 += coef["S2"][LOS_indices].mean(dim=0)
@@ -157,9 +170,33 @@ class CosmolStLibrary:
         S1 /= len(st_paths)
         S2 /= len(st_paths)
 
-        coef = {"S0": S0, "S1": S1, "S2": S2}
+        end = j_end + 1 if j_end else None
+        S1 = S1[j_start:end]
+        S2 = S2[j_start:end, j_start:end]
 
-        return coef
+        if isotropic:
+            S1 = S1.mean(dim=-1)
+            S2 = S2.mean(dim=(-2, -1))
+            if decorrelated_S2:
+                S2 = S2 / S1
+        else:
+            if decorrelated_S2:
+                raise NotImplementedError
+
+        if return_type == "dict":
+            if drop_S0:
+                return {"S1": S1, "S2": S2}
+            else:
+                return {"S0": S0, "S1": S1, "S2": S2}
+        elif return_type == "sequence":
+            S0 = S0.flatten()
+            S1 = S1.flatten()
+            S2 = S2.flatten()
+            S2 = S2[S2 != 0.]
+            if drop_S0:
+                return torch.hstack((S1, S2))
+            else:
+                return torch.hstack((S0, S1, S2))
 
 
     def get_fid_scoef(
