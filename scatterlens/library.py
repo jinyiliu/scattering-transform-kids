@@ -71,7 +71,7 @@ class _StLibrary:
 
     def calc_sim_scoef(self, **kwargs):
         """Calculate the scattering coefficients according to the given region,
-                cosmology, and redshift bins."""
+        cosmology, and redshift bins."""
         if not hasattr(self, "sims"):
             raise AttributeError
 
@@ -108,11 +108,12 @@ class _StLibrary:
     ):
         assert return_type in ("sequence", "dict")
         if LOS:
+            assert hasattr(self, "sims")
             if isinstance(LOS, int):
                 LOS = [LOS]
-            LOS_indices = [ LOS_i - 1 for LOS_i in LOS ]
+            st_indices = [self.sims.LOS_indices.index(_LOS) for _LOS in LOS]
         else:
-            LOS_indices = slice(None)
+            st_indices = slice(None)
 
         coef = torch.load(
             os.path.join(self.libdir, st_paths[0]), weights_only=True)
@@ -125,9 +126,9 @@ class _StLibrary:
         for st_path in st_paths:
             coef = torch.load(
                 os.path.join(self.libdir, st_path), weights_only=True)
-            S0 += coef["S0"][LOS_indices].mean(dim=0)
-            S1 += coef["S1"][LOS_indices].mean(dim=0)
-            S2 += coef["S2"][LOS_indices].mean(dim=0)
+            S0 += coef["S0"][st_indices].mean(dim=0)
+            S1 += coef["S1"][st_indices].mean(dim=0)
+            S2 += coef["S2"][st_indices].mean(dim=0)
 
         S0 /= len(st_paths)
         S1 /= len(st_paths)
@@ -231,8 +232,8 @@ class CosmolStLibrary(_StLibrary):
         if region:
             if isinstance(region, int):
                 region = [region]
-            for region_i in region:
-                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, region_i))
+            for _region in region:
+                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, _region))
         else:
             pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
                 "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
@@ -317,8 +318,8 @@ class CovStLibrary(_StLibrary):
         if region:
             if isinstance(region, int):
                 region = [region]
-            for region_i in region:
-                st_paths.append(self.get_savepath(zbin1, zbin2, region_i))
+            for _region in region:
+                st_paths.append(self.get_savepath(zbin1, zbin2, _region))
         else:
             pathname = "*_ZB{}xZB{}_*.pt".format(zbin1, zbin2)
             st_paths = glob(pathname=pathname, root_dir=self.libdir)
