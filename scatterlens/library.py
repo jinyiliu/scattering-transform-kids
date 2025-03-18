@@ -28,7 +28,7 @@ def _get_Scattering2D_per_region(
     return ret
 
 
-class CosmolStLibrary:
+class _StLibrary:
     def __init__(
             self,
             libdir: os.PathLike | str,
@@ -63,45 +63,28 @@ class CosmolStLibrary:
 
             self.ST = _get_Scattering2D_per_region(
                 sims.region_MN, filterlib=filterlib, **kwargs)
-            self.fname = "SCOEF_{}_Cosmol{}_ZB{}xZB{}_R{}.pt"
 
 
-    def get_savepath(self, cosmol: int, zbin1: int, zbin2: int, region: int):
-        """Return the savepath according to the given region, cosmology, and
-        redshift bins."""
-        if hasattr(self, "sims"):
-            fname = self.fname.format(
-                self.sims.simsname, "fid" if cosmol==-1 else cosmol,
-                zbin1, zbin2, region)
-        else:
-            pathname = "*_Cosmol{}_ZB{}xZB{}_R{}.pt".format(
-                "fid" if cosmol==-1 else cosmol, zbin1, zbin2, region)
-            matched = glob(pathname=pathname, root_dir=self.libdir)
-            if not matched:
-                raise FileNotFoundError
-            else:
-                fname = matched[0]
-
-        savepath = os.path.join(self.libdir, fname)
-        return savepath
+    def get_savepath(self, **kwargs):
+        raise NotImplementedError("Define this function in the child class.")
 
 
-    def calc_sim_scoef(
-            self, cosmol: int, zbin1: int, zbin2: int, region: int):
+    def calc_sim_scoef(self, **kwargs):
         """Calculate the scattering coefficients according to the given region,
-        cosmology, and redshift bins."""
+                cosmology, and redshift bins."""
         if not hasattr(self, "sims"):
             raise AttributeError
 
-        savepath = self.get_savepath(cosmol, zbin1, zbin2, region)
+        savepath = self.get_savepath(**kwargs)
+
+        region = kwargs["region"]
 
         images = torch.zeros(
             size=(len(self.sims.LOS_indices), *self.sims.region_MN[region]),
         )
 
         for i, LOS in enumerate(self.sims.LOS_indices):
-            mass = self.sims.get_sim_massmap(
-                cosmol=cosmol, zbin1=zbin1, zbin2=zbin2, LOS=LOS, region=region)
+            mass = self.sims.get_sim_massmap(**kwargs, LOS=LOS)
             images[i] = torch.from_numpy(mass)
 
         if self.masklib:
@@ -112,38 +95,18 @@ class CosmolStLibrary:
         self.ST[region].scattering(images, mask=mask, savepath=savepath)
 
 
-    def get_sim_scoef(
+    def _get_sim_scoef_from_paths(
             self,
-            cosmol: int | str,
-            zbin1: int,
-            zbin2: int,
-            region: int | Sequence[int] | None=None,
-            LOS: int | Sequence[int] | None=None,
-            j_start: int | None=None,
-            j_end: int | None=None,
-            isotropic: bool=True,
-            drop_S0: bool=True,
-            decorrelated_S2: bool=True,
-            return_type: str="sequence",
+            st_paths: Sequence[os.PathLike | str],
+            LOS: Sequence[int] | None = None,
+            j_start: int | None = None,
+            j_end: int | None = None,
+            isotropic: bool = True,
+            drop_S0: bool = True,
+            decorrelated_S2: bool = True,
+            return_type: str = "sequence",
     ):
-        """Return the scattering coefficients according to the given region,
-        cosmology, redshift bins, and LOS."""
         assert return_type in ("sequence", "dict")
-        assert zbin2 >= zbin1
-
-        st_paths = []
-        if region:
-            if isinstance(region, int):
-                region = [region]
-            for region_i in region:
-                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, region_i))
-        else:
-            pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
-                "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
-            st_paths = glob(pathname=pathname, root_dir=self.libdir)
-            if len(st_paths) == 0:
-                raise FileNotFoundError
-
         if LOS:
             if isinstance(LOS, int):
                 LOS = [LOS]
@@ -161,7 +124,7 @@ class CosmolStLibrary:
 
         for st_path in st_paths:
             coef = torch.load(
-                os.path.join(self.libdir, st_paths[0]), weights_only=True)
+                os.path.join(self.libdir, st_path), weights_only=True)
             S0 += coef["S0"][LOS_indices].mean(dim=0)
             S1 += coef["S1"][LOS_indices].mean(dim=0)
             S2 += coef["S2"][LOS_indices].mean(dim=0)
@@ -199,6 +162,98 @@ class CosmolStLibrary:
                 return torch.hstack((S0, S1, S2))
 
 
+    def find_fname(self, fname_patt: str):
+        """Find the filename according to the given filename pattern."""
+        matched = glob(pathname=fname_patt, root_dir=self.libdir)
+        if not matched:
+            raise FileNotFoundError
+        else:
+            fname = matched[0]
+        return fname
+
+
+
+
+
+class CosmolStLibrary(_StLibrary):
+    def __init__(
+            self,
+            libdir: os.PathLike | str,
+            filterlib=None,
+            masklib=None,
+            sims=None,
+            **kwargs):
+        super().__init__(libdir, filterlib, masklib, sims, **kwargs)
+        self.fname = "SCOEF_{}_Cosmol{}_ZB{}xZB{}_R{}.pt"
+
+
+    def get_savepath(self, cosmol: int, zbin1: int, zbin2: int, region: int):
+        """Return the savepath according to the given region, cosmology, and
+        redshift bins."""
+        if hasattr(self, "sims"):
+            fname = self.fname.format(
+                self.sims.simsname, "fid" if cosmol==-1 else cosmol,
+                zbin1, zbin2, region)
+        else:
+            fname_patt = "*_Cosmol{}_ZB{}xZB{}_R{}.pt".format(
+                "fid" if cosmol==-1 else cosmol, zbin1, zbin2, region)
+            fname = self.find_fname(fname_patt=fname_patt)
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
+
+
+    def calc_sim_scoef(
+            self, cosmol: int, zbin1: int, zbin2: int, region: int):
+        return super().calc_sim_scoef(
+            cosmol=cosmol, zbin1=zbin1, zbin2=zbin2, region=region)
+
+
+    def get_sim_scoef(
+            self,
+            cosmol: int | str,
+            zbin1: int,
+            zbin2: int,
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            return_type: str="sequence",
+    ):
+        """Return the scattering coefficients according to the given region,
+        cosmology, redshift bins, and LOS."""
+        assert zbin2 >= zbin1
+
+        st_paths = []
+        if region:
+            if isinstance(region, int):
+                region = [region]
+            for region_i in region:
+                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, region_i))
+        else:
+            pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
+                "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
+            st_paths = glob(pathname=pathname, root_dir=self.libdir)
+            if len(st_paths) == 0:
+                raise FileNotFoundError
+
+        return super()._get_sim_scoef_from_paths(
+            st_paths=st_paths,
+            LOS=LOS,
+            j_start=j_start,
+            j_end=j_end,
+            isotropic=isotropic,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+            return_type=return_type,
+        )
+
+
+
+
     def get_fid_scoef(
             self,
             zbin1: int,
@@ -211,9 +266,75 @@ class CosmolStLibrary:
 
 
 
-class CovStLibrary:
-    def __init__(self, libdir: os.PathLike | str, ):
-        pass
+class CovStLibrary(_StLibrary):
+    def __init__(
+            self,
+            libdir: os.PathLike | str,
+            filterlib=None,
+            masklib=None,
+            sims=None,
+            **kwargs):
+        super().__init__(libdir, filterlib, masklib, sims, **kwargs)
+        self.fname = "SCOEF_{}_ZB{}xZB{}_R{}.pt"
+
+
+    def get_savepath(self, zbin1: int, zbin2: int, region: int):
+        """Return the savepath according to the given region and redshift bins."""
+        if hasattr(self, "sims"):
+            fname = self.fname.format(self.sims.simsname, zbin1, zbin2, region)
+        else:
+            fname_patt = "*_ZB{}xZB{}_R{}.pt".format(zbin1, zbin2, region)
+            fname = self.find_fname(fname_patt=fname_patt)
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
+
+
+    def calc_sim_scoef(self, zbin1: int, zbin2: int, region: int):
+        """Calculate the scattering coefficients according to the given region
+        and redshift bins."""
+        return super().calc_sim_scoef(zbin1=zbin1, zbin2=zbin2, region=region)
+
+
+    def get_sim_scoef(
+            self,
+            zbin1: int,
+            zbin2: int,
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            return_type: str="sequence",
+    ):
+        """Return the scattering coefficients according to the given region,
+        cosmology, redshift bins, and LOS."""
+        assert zbin2 >= zbin1
+
+        st_paths = []
+        if region:
+            if isinstance(region, int):
+                region = [region]
+            for region_i in region:
+                st_paths.append(self.get_savepath(zbin1, zbin2, region_i))
+        else:
+            pathname = "*_ZB{}xZB{}_*.pt".format(zbin1, zbin2)
+            st_paths = glob(pathname=pathname, root_dir=self.libdir)
+            if len(st_paths) == 0:
+                raise FileNotFoundError
+
+        return super()._get_sim_scoef_from_paths(
+            st_paths=st_paths,
+            LOS=LOS,
+            j_start=j_start,
+            j_end=j_end,
+            isotropic=isotropic,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+            return_type=return_type,
+        )
 
 
 

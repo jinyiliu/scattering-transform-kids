@@ -81,8 +81,8 @@ class CosmoSLICE(KiDS1000):
             cosmol: int,
             zbin1: int,
             zbin2: int,
-            LOS: int,
             region: int,
+            LOS: int,
     ) -> NDArray:
         assert (
             CosmoSLICE.has_cosmol(cosmol)
@@ -113,8 +113,8 @@ class CosmoSLICE(KiDS1000):
     def get_fid_massmap(
             zbin1: int,
             zbin2: int,
-            LOS: int,
             region: int,
+            LOS: int,
     ) -> NDArray:
         massmap = CosmoSLICE.get_sim_massmap(cosmol=-1, zbin1=zbin1,
             zbin2=zbin2, LOS=LOS, region=region)
@@ -156,7 +156,7 @@ class SLICE(KiDS1000):
     LOS_indices.pop(198 - 74)
 
     @staticmethod
-    def get_sim_massmap(region: int, zbin1: int, zbin2: int, LOS: int) -> NDArray:
+    def get_sim_massmap(zbin1: int, zbin2: int, region: int, LOS: int) -> NDArray:
         assert (
             KiDS1000.has_region(region)
             and KiDS1000.has_zbin(zbin1)
