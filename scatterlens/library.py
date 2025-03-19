@@ -1,5 +1,7 @@
 import os
 import torch
+from numpy.typing import ArrayLike
+import pandas as pd
 from glob import glob
 from typing import Sequence
 
@@ -49,6 +51,8 @@ class _StLibrary:
             **kwargs: The keyword arguments for initialising Scattering2D.
         """
         self.libdir = libdir
+        self.filterlib = filterlib
+        self.masklib = masklib
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
 
@@ -98,15 +102,27 @@ class _StLibrary:
     def _get_sim_scoef_from_paths(
             self,
             st_paths: Sequence[os.PathLike | str],
-            LOS: Sequence[int] | None = None,
-            j_start: int | None = None,
-            j_end: int | None = None,
-            isotropic: bool = True,
-            drop_S0: bool = True,
-            decorrelated_S2: bool = True,
-            return_type: str = "sequence",
+            LOS: Sequence[int] | None=None,
+            region_weights: ArrayLike | str | None="auto",
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            return_type: str="sequence",
     ):
         assert return_type in ("sequence", "dict")
+        if region_weights:
+            if region_weights == "auto":
+                assert hasattr(self, "masklib")
+                region = [int(st_path[-5:-3].lstrip("R")) for st_path in st_paths]
+                region_weights = self.masklib.get_region_areas(region)
+            else:
+                assert len(region_weights) == len(st_paths)
+        else:
+            region_weights = [1.] * len(st_paths)
+
+
         if LOS:
             assert hasattr(self, "sims")
             if isinstance(LOS, int):
@@ -123,16 +139,13 @@ class _StLibrary:
         S1 = torch.zeros(size=(J, L))
         S2 = torch.zeros(size=(J, J, L, L))
 
-        for st_path in st_paths:
+        for st_path, region_weight in zip(st_paths, region_weights):
             coef = torch.load(
                 os.path.join(self.libdir, st_path), weights_only=True)
-            S0 += coef["S0"][st_indices].mean(dim=0)
-            S1 += coef["S1"][st_indices].mean(dim=0)
-            S2 += coef["S2"][st_indices].mean(dim=0)
-
-        S0 /= len(st_paths)
-        S1 /= len(st_paths)
-        S2 /= len(st_paths)
+            norm = region_weight / sum(region_weights)
+            S0 += coef["S0"][st_indices].mean(dim=0) * norm
+            S1 += coef["S1"][st_indices].mean(dim=0) * norm
+            S2 += coef["S2"][st_indices].mean(dim=0) * norm
 
         end = j_end + 1 if j_end else None
         S1 = S1[j_start:end]
@@ -217,6 +230,7 @@ class CosmolStLibrary(_StLibrary):
             zbin2: int,
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
+            region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
             isotropic: bool=True,
@@ -244,6 +258,7 @@ class CosmolStLibrary(_StLibrary):
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
             LOS=LOS,
+            region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
             isotropic=isotropic,
@@ -303,6 +318,7 @@ class CovStLibrary(_StLibrary):
             zbin2: int,
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
+            region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
             isotropic: bool=True,
@@ -329,6 +345,7 @@ class CovStLibrary(_StLibrary):
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
             LOS=LOS,
+            region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
             isotropic=isotropic,
@@ -383,7 +400,7 @@ class MaskLibrary:
             self, libdir: os.PathLike | str,
             dtype: torch.dtype | None=None,
             sims=None,
-            pixel_length: float | None=None,):
+    ):
         """Library to store the masks for different regions."""
         self.libdir = libdir
         if not os.path.exists(self.libdir):
@@ -393,18 +410,38 @@ class MaskLibrary:
             assert hasattr(sims, "get_fid_massmap")
             assert callable(sims.get_fid_massmap)
             assert hasattr(sims, "region_MN")
+            assert hasattr(sims, "resol")
 
             self.fname = "Mask_R{}_M{}N{}.pt"
+
+            pixel_area = (sims.resol / 60) ** 2 # square degree
+            df = pd.DataFrame.from_dict(
+                sims.region_MN, orient='index', columns=['M', 'N'])
+            sky_area = []
 
             for region in sims.region_MN.keys():
                 mass = sims.get_fid_massmap(zbin1=1, zbin2=1, LOS=1, region=region)
                 mask = mass != 0.
+
+                sky_area.append(mask.sum() * pixel_area)
+
                 mask = torch.from_numpy(mask[None, :, :])
                 if mask.dtype != dtype:
                     mask = mask.to(dtype)
                 torch.save(mask, os.path.join(
                     libdir, self.fname.format(region, *sims.region_MN[region]))
                 )
+
+            df["Area[deg2]"] = sky_area
+            df.to_csv(
+                os.path.join(self.libdir, "Sky_Areas.txt"),
+                sep="\t", index=True, header=True, float_format="%.6f",
+            )
+
+        self._areas = pd.read_csv(
+            os.path.join(self.libdir, "Sky_Areas.txt"),
+            sep="\t", index_col=0,
+        )
 
 
     def get_savepath(self, region: int):
@@ -417,3 +454,9 @@ class MaskLibrary:
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
+
+    def get_region_areas(self, region: Sequence[int] | int):
+        ret = []
+        for _region in region:
+            ret.append(float(self._areas.loc[_region]["Area[deg2]"]))
+        return ret
