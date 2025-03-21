@@ -109,9 +109,8 @@ class _StLibrary:
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
-            return_type: str="sequence",
-    ):
-        assert return_type in ("sequence", "dict")
+            flatten: bool = True,
+    ) -> dict:
         if region_weights:
             if region_weights == "auto":
                 assert hasattr(self, "masklib")
@@ -160,20 +159,16 @@ class _StLibrary:
             if decorrelated_S2:
                 raise NotImplementedError
 
-        if return_type == "dict":
-            if drop_S0:
-                return {"S1": S1, "S2": S2}
-            else:
-                return {"S0": S0, "S1": S1, "S2": S2}
-        elif return_type == "sequence":
+        if flatten:
             S0 = S0.flatten()
             S1 = S1.flatten()
             S2 = S2.flatten()
             S2 = S2[S2 != 0.]
-            if drop_S0:
-                return torch.hstack((S1, S2))
-            else:
-                return torch.hstack((S0, S1, S2))
+
+        if drop_S0:
+            return {"S1": S1, "S2": S2}
+        else:
+            return {"S0": S0, "S1": S1, "S2": S2}
 
 
     def find_fname(self, fname_patt: str):
@@ -236,7 +231,7 @@ class CosmolStLibrary(_StLibrary):
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
-            return_type: str="sequence",
+            flatten: bool=True,
     ):
         """Return the scattering coefficients according to the given region,
         cosmology, redshift bins, and LOS."""
@@ -264,7 +259,7 @@ class CosmolStLibrary(_StLibrary):
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
-            return_type=return_type,
+            flatten=flatten,
         )
 
 
@@ -324,7 +319,7 @@ class CovStLibrary(_StLibrary):
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
-            return_type: str="sequence",
+            flatten: bool=True,
     ):
         """Return the scattering coefficients according to the given region,
         cosmology, redshift bins, and LOS."""
@@ -351,7 +346,7 @@ class CovStLibrary(_StLibrary):
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
-            return_type=return_type,
+            flatten=flatten,
         )
 
 
