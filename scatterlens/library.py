@@ -106,11 +106,17 @@ class _StLibrary:
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
+            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             flatten: bool = True,
-    ) -> dict:
+            return_type: str = "dict",
+    ) -> dict | Sequence:
+        assert return_type in ("dict", "sequence")
+        if return_type == "sequence" and not flatten:
+            flatten = True
+
         if region_weights:
             if region_weights == "auto":
                 assert hasattr(self, "masklib")
@@ -150,6 +156,9 @@ class _StLibrary:
         S1 = S1[j_start:end]
         S2 = S2[j_start:end, j_start:end]
 
+        if j2_equals_j1:
+            S2 = S2.diagonal(dim1=0, dim2=1).permute(2, 1, 0)
+
         if isotropic:
             S1 = S1.mean(dim=-1)
             S2 = S2.mean(dim=(-2, -1))
@@ -165,10 +174,17 @@ class _StLibrary:
             S2 = S2.flatten()
             S2 = S2[S2 != 0.]
 
-        if drop_S0:
-            return {"S1": S1, "S2": S2}
-        else:
-            return {"S0": S0, "S1": S1, "S2": S2}
+        if return_type == "dict":
+            if drop_S0:
+                return {"S1": S1, "S2": S2}
+            else:
+                return {"S0": S0, "S1": S1, "S2": S2}
+
+        if return_type == "sequence":
+            if drop_S0:
+                return torch.hstack((S1, S2))
+            else:
+                return torch.hstack((S0, S1, S2))
 
 
     def find_fname(self, fname_patt: str):
@@ -228,10 +244,12 @@ class CosmolStLibrary(_StLibrary):
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
+            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             flatten: bool=True,
+            return_type: str="dict",
     ):
         """Return the scattering coefficients according to the given region,
         cosmology, redshift bins, and LOS."""
@@ -256,10 +274,12 @@ class CosmolStLibrary(_StLibrary):
             region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
+            j2_equals_j1=j2_equals_j1,
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
             flatten=flatten,
+            return_type=return_type,
         )
 
 
@@ -316,10 +336,12 @@ class CovStLibrary(_StLibrary):
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
+            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             flatten: bool=True,
+            return_type: str="dict",
     ):
         """Return the scattering coefficients according to the given region,
         cosmology, redshift bins, and LOS."""
@@ -343,12 +365,53 @@ class CovStLibrary(_StLibrary):
             region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
+            j2_equals_j1=j2_equals_j1,
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
             flatten=flatten,
+            return_type=return_type,
         )
 
+    def get_cov(
+            self,
+            zbin1: int,
+            zbin2: int,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            j2_equals_j1: bool=False,
+            region: int | Sequence[int] | None=None,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            norm: bool=True,
+    ):
+        """Return the covariance matrix."""
+        assert hasattr(self, "sims")
+
+        for i, LOS in enumerate(self.sims.LOS_indices):
+            scoef = self.get_sim_scoef(
+                zbin1=zbin1,
+                zbin2=zbin2,
+                region=region,
+                region_weights="auto",
+                LOS=LOS,
+                j_start=j_start,
+                j_end=j_end,
+                j2_equals_j1=j2_equals_j1,
+                drop_S0=drop_S0,
+                isotropic=True,
+                flatten=True,
+                return_type="sequence",
+                decorrelated_S2=decorrelated_S2,
+            )
+            if "scoef_tensor" not in locals():
+                scoef_tensor = torch.zeros(size=(len(scoef), len(self.sims.LOS_indices)))
+            scoef_tensor[:, i] = scoef
+
+        if norm:
+            return torch.corrcoef(scoef_tensor)
+        else:
+            return torch.cov(scoef_tensor)
 
 
 class FilterLibrary:
