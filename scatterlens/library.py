@@ -375,8 +375,7 @@ class CovStLibrary(_StLibrary):
 
     def get_cov(
             self,
-            zbin1: int,
-            zbin2: int,
+            zbin_pairs: list[tuple[int, int]]=None,
             j_start: int | None=None,
             j_end: int | None=None,
             j2_equals_j1: bool=False,
@@ -388,25 +387,32 @@ class CovStLibrary(_StLibrary):
         """Return the covariance matrix."""
         assert hasattr(self, "sims")
 
-        for i, LOS in enumerate(self.sims.LOS_indices):
-            scoef = self.get_sim_scoef(
-                zbin1=zbin1,
-                zbin2=zbin2,
-                region=region,
-                region_weights="auto",
-                LOS=LOS,
-                j_start=j_start,
-                j_end=j_end,
-                j2_equals_j1=j2_equals_j1,
-                drop_S0=drop_S0,
-                isotropic=True,
-                flatten=True,
-                return_type="sequence",
-                decorrelated_S2=decorrelated_S2,
-            )
-            if "scoef_tensor" not in locals():
-                scoef_tensor = torch.zeros(size=(len(scoef), len(self.sims.LOS_indices)))
-            scoef_tensor[:, i] = scoef
+        for zpair_ind, (zbin1, zbin2) in enumerate(zbin_pairs):
+            for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
+                scoef = self.get_sim_scoef(
+                    zbin1=zbin1,
+                    zbin2=zbin2,
+                    region=region,
+                    region_weights="auto",
+                    LOS=LOS,
+                    j_start=j_start,
+                    j_end=j_end,
+                    j2_equals_j1=j2_equals_j1,
+                    drop_S0=drop_S0,
+                    isotropic=True,
+                    flatten=True,
+                    return_type="sequence",
+                    decorrelated_S2=decorrelated_S2,
+                )
+                if "scoef_tensor" not in locals():
+                    scoef_tensor = torch.zeros(size=(
+                            len(zbin_pairs),
+                            len(scoef),
+                            len(self.sims.LOS_indices),
+                    ))
+                scoef_tensor[zpair_ind, :, LOS_ind] = scoef
+
+        scoef_tensor = scoef_tensor.flatten(start_dim=0, end_dim=1)
 
         if norm:
             return torch.corrcoef(scoef_tensor)
