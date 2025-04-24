@@ -1,5 +1,6 @@
 import os
 import torch
+import pickle
 from numpy.typing import ArrayLike
 import pandas as pd
 from glob import glob
@@ -283,8 +284,6 @@ class CosmolStLibrary(_StLibrary):
         )
 
 
-
-
     def get_fid_scoef(
             self,
             zbin1: int,
@@ -294,6 +293,62 @@ class CosmolStLibrary(_StLibrary):
     ):
         return self.get_sim_scoef(
             cosmol="fid", zbin1=zbin1, zbin2=zbin2, region=region, LOS=LOS)
+
+
+    def get_ml_training_set(
+            self,
+            region_weights: ArrayLike | str | None="auto",
+            j_start: int | None=None,
+            j_end: int | None=None,
+            j2_equals_j1: bool=False,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            savepath: str | os.PathLike | None=None,
+    ) -> dict[str, torch.Tensor] | None:
+        assert hasattr(self, "sims")
+        assert hasattr(self.sims, "cosmology_info")
+
+        cosmologies = torch.tensor(self.sims.cosmology_info()[[
+            "Omega_m", "S_8", "h", "w_0"
+        ]].values)
+
+        for cosmol_ind, cosmol in enumerate(self.sims.cosmol_indices):
+            for zpair_ind, (zbin1, zbin2) in enumerate(self.sims.cross_zbins):
+                scoef = self.get_sim_scoef(
+                    cosmol=cosmol,
+                    zbin1=zbin1,
+                    zbin2=zbin2,
+                    region=None,
+                    region_weights=region_weights,
+                    LOS=None,
+                    j_start=j_start,
+                    j_end=j_end,
+                    j2_equals_j1=j2_equals_j1,
+                    drop_S0=drop_S0,
+                    isotropic=True,
+                    flatten=True,
+                    return_type="sequence",
+                    decorrelated_S2=decorrelated_S2,
+                )
+                if "scoef_tensor" not in locals():
+                    scoef_tensor = torch.zeros(size=(
+                            len(self.sims.cosmol_indices),
+                            len(self.sims.cross_zbins),
+                            len(scoef),
+                    ))
+                scoef_tensor[cosmol_ind, zpair_ind, :] = scoef
+
+        scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
+
+        training_set = {
+            "input": cosmologies,
+            "target": scoef_tensor,
+        }
+
+        if savepath:
+            torch.save(training_set, savepath)
+
+        return training_set
 
 
 
@@ -418,6 +473,16 @@ class CovStLibrary(_StLibrary):
             return torch.corrcoef(scoef_tensor)
         else:
             return torch.cov(scoef_tensor)
+
+    @staticmethod
+    def cov2corr(cov: torch.Tensor) -> torch.Tensor:
+        """Convert a covariance matrix to a correlation matrix with diagonal
+        elements equal to one."""
+        diag = torch.diagonal(cov, dim1=-2, dim2=-1)
+        std_devs = torch.sqrt(diag)
+        denom = std_devs.unsqueeze(-1) * std_devs.unsqueeze(-2)
+        corr = cov / denom
+        return corr
 
 
 class FilterLibrary:
