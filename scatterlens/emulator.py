@@ -234,15 +234,57 @@ class PerFeatureEmulator(Emulator):
 
     @override
     def fit(self):
-        pass
+        trained_regressors = [
+            regressor.fit(
+                self.training_set["input"], self.training_set["target"][:, i]
+            )
+            for i, regressor in enumerate(self.regressors)
+        ]
+        self.regressors = trained_regressors
 
     @override
     def predict(self, X):
-        pass
+        # FIXME only works for one set of input parameters
+        return np.array([[
+            regressor.predict(X).flatten()[0] for regressor in self.regressors
+        ]])
 
     @override
     def validation(self):
-        pass
+        loo = LeaveOneOut()
+
+        all_mse = []
+        all_mse_frac = []
+
+        for i, (train_index, test_index) in enumerate(
+                loo.split(self.training_set["input"])):
+            temp_regressors = [
+                self.regressor_type(**self.regressor_args)
+                for _ in range(self.n_features)
+            ]
+            temp_training_set = {
+                "input": self.training_set["input"][train_index],
+                "target": self.training_set["target"][train_index],
+            }
+            mse = []
+            for feature_index, regressor in enumerate(temp_regressors):
+                regressor.fit(
+                    temp_training_set["input"],
+                    temp_training_set["target"][:, feature_index]
+                )
+                mse.append(
+                    self.training_set["target"][test_index][:, feature_index] -
+                    regressor.predict(self.training_set["input"][test_index])[0]
+                )
+
+
+            mse_frac = mse / self.training_set["target"][test_index][0]
+            all_mse.append(mse)
+            all_mse_frac.append(mse_frac)
+
+        avg_mse = np.nanmean(all_mse, axis=0)
+        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
+        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
 
 
 class PolynomialRegressor:
