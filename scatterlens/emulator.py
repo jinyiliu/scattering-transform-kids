@@ -5,6 +5,7 @@ from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import LeaveOneOut
+from sklearn.linear_model import LinearRegression as LinearRegressor
 
 # Part of this code is copied from Lars.
 # Source: https://github.com/ljabbo/kids-persistent-homology
@@ -127,7 +128,6 @@ class S1S2Emulator(Emulator):
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
-            print(f"LOO Validation {i+1:d}/{self.n_samples:d}")
             temp_regressors = self._create_regressors()
             temp_training_set = {
                 "input": self.training_set["input"][train_index],
@@ -277,7 +277,7 @@ class PerFeatureEmulator(Emulator):
                     regressor.predict(self.training_set["input"][test_index])[0]
                 )
 
-
+            mse = np.asarray(mse).squeeze()
             mse_frac = mse / self.training_set["target"][test_index][0]
             all_mse.append(mse)
             all_mse_frac.append(mse_frac)
