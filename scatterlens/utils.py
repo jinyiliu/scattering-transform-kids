@@ -1,4 +1,6 @@
 import multiprocessing
+import numpy as np
+from pymaster.utils import mask_apodization_flat
 from tqdm import tqdm
 
 def mp_wapper_calc_scoef(stlib, *args):
@@ -55,3 +57,31 @@ tqdm_style = {
     "ascii": " =",
     "smoothing": 0.,
 }
+
+
+def mask_apodization(
+        mask: np.ndarray,
+        xresol: float,
+        yresol: float,
+        aposcale: float,
+        apotype: str="C1",
+) -> np.ndarray:
+    """Apodize a mask with a given apodization scale.
+
+    Args:
+        mask: A binary mask.
+        xresol: Resolution of the mask in x-axis in arcminutes.
+        yresol: Resolution of the mask in y-axis in arcminutes.
+        aposcale: Apodization scale in arcminutes.
+        apotype: Apodization type in ["C1", "C2", "Smooth"].
+
+    Returns:
+        Apodized mask.
+
+    Notes:
+        This is a wrapper for mask_apodization_flat function in pymaster.utils.
+    """
+    lx = xresol * mask.shape[0] / 180 / 60
+    ly = yresol * mask.shape[1] / 180 / 60
+    aposcale_deg = aposcale / 60
+    return mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)

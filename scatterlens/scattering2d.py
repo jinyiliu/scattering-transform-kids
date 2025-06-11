@@ -101,8 +101,6 @@ class Scattering2D(object):
             assert images.dim() == 3
         num_images = images.shape[0]
 
-        mask_bank = self._generate_mask_bank(mask=mask)
-
         S0 = torch.zeros((num_images, 1), dtype=self.dtype)
         S1 = torch.zeros((num_images, J, L), dtype=self.dtype)
         S2 = torch.zeros((num_images, J, J, L, L), dtype=self.dtype)
@@ -114,7 +112,8 @@ class Scattering2D(object):
 
         S0[:, 0] = images.mean(dim=(-2, -1))
 
-        images_f = fft2(images) # the Fourier of images
+        images_f = fft2(images * mask) # the Fourier of images
+        mask, fsky = self._read_mask(mask=mask)
 
         if not large_batch:
             for j1 in range(J):
@@ -122,18 +121,17 @@ class Scattering2D(object):
                     _images_f = _subsample_fourier(images_f, M=M, N=N, j=j1)
                 else:
                     _images_f = images_f.clone().detach()
-                mask = mask_bank[j1]
-                M1, N1 = mask.shape[-2:]
 
                 I1 = ifft2(
                         _images_f[:, None, :, :] * self.psi[j1][None, :, :, :],
                         dim=(-2, -1),
                     ).abs()
+                M1, N1 = I1.shape[-2:]
                 I1 *= (M1 * N1) / (M * N)
-                S1[:, j1] = torch.sum(I1 * mask, dim=(-2, -1)) / mask.sum()
+                S1[:, j1] = torch.mean(I1, dim=(-2, -1)) / fsky
                 I1_f = fft2(I1)
                 if self.return_I1:
-                    I1_SET.append(I1.mean(dim=1) * mask)
+                    I1_SET.append(I1.mean(dim=1))
                 del I1
 
                 for j2 in range(J):
@@ -142,15 +140,14 @@ class Scattering2D(object):
                             _images_f = _subsample_fourier(I1_f, M=M, N=N, j=j2)
                         else:
                             _images_f = I1_f.clone().detach()
-                        mask = mask_bank[j2]
-                        M2, N2 = mask.shape[-2:]
 
                         I2 = ifft2(
                             _images_f[:, :, None, :, :] * self.psi[j2][None, None, :, :, :],
                             dim=(-2, -1),
                         ).abs()
+                        M2, N2 = I2.shape[-2:]
                         I2 *= (M2 * N2) / (M1 * N1)
-                        S2[:, j1, j2, :, :] = torch.sum(I2 * mask, dim=(-2, -1)) / mask.sum()
+                        S2[:, j1, j2, :, :] = torch.mean(I2, dim=(-2, -1)) / fsky
                         del I2
         else:
             raise NotImplementedError
@@ -165,8 +162,9 @@ class Scattering2D(object):
                 return ret
 
 
-    def _generate_mask_bank(
-            self, mask:torch.Tensor | NDArray | os.PathLike | str | None=None):
+    def _read_mask(self, mask: torch.Tensor | NDArray | os.PathLike | str | None=None):
+        """Read the mask and calculate the fraction of sky (fsky) it covers. If
+        mask is None, return an all-ones mask and fksy=1."""
         if mask is not None:
             if isinstance(mask, str):
                 if mask.endswith(".pt"):
@@ -186,26 +184,24 @@ class Scattering2D(object):
             if mask.dim() == 2:
                 assert mask.shape == (self.M, self.N)
                 mask = mask[None, :, :]
-            mask_bank = []
-
-            if self.downsample_algo:
-                for j in range(self.J):
-                    _M, _N = self.psi[j].shape[-2:]
-                    mask_bank.append(
-                        _binary_mask_subsample(mask, size=[_M, _N]))
-            else:
-                mask_bank = [mask] * self.J
         else:
             mask = torch.ones((1, self.M, self.N), dtype=self.dtype)
 
-            if self.downsample_algo:
-                mask_bank = []
-                for j in range(self.J):
-                    _M, _N = self.psi[j].shape[-2:]
-                    mask_bank.append(
-                        torch.ones((1, _M, _N), dtype=self.dtype))
-            else:
-                mask_bank = [mask] * self.J
+        fsky = torch.mean(mask, dim=(-2, -1)).squeeze()
+        return mask, fsky
+
+
+    def _generate_mask_bank(
+            self, mask:torch.Tensor | NDArray | os.PathLike | str | None=None):
+        mask, fsky = self._read_mask(mask=mask)
+        mask_bank = []
+        if self.downsample_algo:
+            for j in range(self.J):
+                _M, _N = self.psi[j].shape[-2:]
+                mask_bank.append(
+                    _binary_mask_subsample(mask, size=[_M, _N]))
+        else:
+            mask_bank = [mask] * self.J
 
         return mask_bank
 
