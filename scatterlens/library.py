@@ -1,6 +1,7 @@
 import os
 import torch
 import pickle
+import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
 from glob import glob
@@ -8,6 +9,7 @@ from typing import Sequence
 
 from scatterlens.scattering2d import Scattering2D
 from scatterlens.wavelets import Morlet2D
+from scatterlens.utils import mask_apodization
 
 
 def _get_Scattering2D_per_region(
@@ -527,6 +529,8 @@ class FilterLibrary:
 class MaskLibrary:
     def __init__(
             self, libdir: os.PathLike | str,
+            apotype: str | None=None,
+            aposcale: float | None=None,
             dtype: torch.dtype | None=None,
             sims=None,
     ):
@@ -550,11 +554,19 @@ class MaskLibrary:
 
             for region in sims.region_MN.keys():
                 mass = sims.get_fid_massmap(zbin1=1, zbin2=1, LOS=1, region=region)
-                mask = mass != 0.
+                mask_ = np.array(mass != 0., dtype=np.float64)
 
-                sky_area.append(mask.sum() * pixel_area)
+                sky_area.append(mask_.sum() * pixel_area)
+                if apotype is not None:
+                    if aposcale is None:
+                        raise ValueError
+                    else:
+                        mask = torch.from_numpy(mask_apodization(
+                            mask_, sims.resol, sims.resol, aposcale, apotype,
+                        )).unsqueeze(0)
+                else:
+                    mask = torch.from_numpy(mask_[None, :, :])
 
-                mask = torch.from_numpy(mask[None, :, :])
                 if mask.dtype != dtype:
                     mask = mask.to(dtype)
                 torch.save(mask, os.path.join(
