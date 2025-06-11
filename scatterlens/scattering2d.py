@@ -112,8 +112,8 @@ class Scattering2D(object):
 
         S0[:, 0] = images.mean(dim=(-2, -1))
 
-        images_f = fft2(images * mask) # the Fourier of images
         mask, fsky = self._read_mask(mask=mask)
+        images_f = fft2(images * mask)  # the Fourier of images
 
         if not large_batch:
             for j1 in range(J):

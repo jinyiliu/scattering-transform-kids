@@ -46,13 +46,13 @@ def run_mp_scattering(
         pool.apply_async(mp_wapper_calc_scoef, args) for args in args_list
     ]
 
-    with tqdm(total=len(args_list), **tqdm_style) as pbar:
+    with tqdm(total=len(args_list), **_tqdm_style) as pbar:
         for async_result in async_results:
             async_result.get()
             pbar.update()
 
 
-tqdm_style = {
+_tqdm_style = {
     "ncols": 80,
     "ascii": " =",
     "smoothing": 0.,
