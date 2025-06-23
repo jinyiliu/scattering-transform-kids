@@ -1,10 +1,12 @@
 import torch
 import numpy as np
+from copy import deepcopy
 from typing import override
 from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import LeaveOneOut
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression as LinearRegressor
 
 # Part of this code is copied from Lars.
@@ -17,6 +19,8 @@ class Emulator:
     def __init__(
             self,
             training_set: dict[str, torch.Tensor],
+            input_scaler=None,
+            target_scaler=None,
             regressor_type=GaussianProcessRegressor,
             **regressor_args,
     ):
@@ -27,21 +31,34 @@ class Emulator:
         self.n_parameters = training_set["input"].shape[1]
         self.n_features = training_set["target"].shape[1]
 
+        self.input_scaler = input_scaler
+        self.target_scaler = target_scaler
+
         self.regressor_type = regressor_type
         self.regressor_args = regressor_args
         self.regressor = regressor_type(**regressor_args)
+        self.is_fitted = False
 
-        self.training_set = {
+        self._training_set = {
             "input": np.array(training_set["input"]),
             "target": np.array(training_set["target"]),
         }
 
+        self.training_set = deepcopy(self._training_set)
+
+        for scaler, key in zip(
+                [self.input_scaler, self.target_scaler], ["input", "target"]
+        ):
+            if scaler is not None:
+                self.training_set[key] = scaler.fit_transform(self._training_set[key])
+
 
     def fit(self):
         self.regressor.fit(self.training_set["input"], self.training_set["target"])
+        self.is_fitted = True
 
     def predict(self, X):
-        return self.regressor.predict(X)
+        return self._predict(self.regressor, X)
 
     def validation(self):
         loo = LeaveOneOut()
@@ -56,10 +73,10 @@ class Emulator:
                 self.training_set["target"][train_index],
             )
             mse = (
-                self.training_set["target"][test_index][0] -
-                temp_regressor.predict(self.training_set["input"][test_index])[0]
+                self._training_set["target"][test_index][0] -
+                self._predict(temp_regressor, X=self.training_set["input"][test_index])[0]
             )
-            mse_frac = mse / self.training_set["target"][test_index][0]
+            mse_frac = mse / self._training_set["target"][test_index][0]
 
             all_mse.append(mse)
             all_mse_frac.append(mse_frac)
@@ -67,6 +84,16 @@ class Emulator:
         avg_mse = np.nanmean(all_mse, axis=0)
         avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
         return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+
+    def _predict(self, regressor, X):
+        if self.input_scaler is not None:
+            X = self.input_scaler.transform(X)
+
+        Y = regressor.predict(X)
+        if self.target_scaler is not None:
+            Y = self.target_scaler.inverse_transform(Y)
+
+        return Y
 
 
 class S1S2Emulator(Emulator):
