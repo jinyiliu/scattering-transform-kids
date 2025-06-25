@@ -6,7 +6,6 @@ from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import LeaveOneOut
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression as LinearRegressor
 
 # Part of this code is copied from Lars.
@@ -250,10 +249,14 @@ class PerFeatureEmulator(Emulator):
     def __init__(
             self,
             training_set: dict[str, torch.Tensor],
+            input_scaler=None,
+            target_scaler=None,
             regressor_type=GaussianProcessRegressor,
             **regressor_args,
     ):
-        super().__init__(training_set, regressor_type, **regressor_args)
+        super().__init__(
+            training_set, input_scaler, target_scaler, regressor_type, **regressor_args
+        )
 
         self.regressors = [
             regressor_type(**regressor_args) for _ in range(self.n_features)
@@ -261,19 +264,28 @@ class PerFeatureEmulator(Emulator):
 
     @override
     def fit(self):
+        self.regressors = self._fit(self.regressors, self.training_set)
+        self.is_fitted = True
+
+    @staticmethod
+    def _fit(regressors, training_set):
         trained_regressors = [
             regressor.fit(
-                self.training_set["input"], self.training_set["target"][:, i]
+                training_set["input"], training_set["target"][:, i]
             )
-            for i, regressor in enumerate(self.regressors)
+            for i, regressor in enumerate(regressors)
         ]
-        self.regressors = trained_regressors
+        return trained_regressors
 
     @override
     def predict(self, X):
+        return self._predict(self.regressors, X)
+
+    @override
+    def _predict(self, regressors, X):
         # FIXME only works for one set of input parameters
         return np.array([[
-            regressor.predict(X).flatten()[0] for regressor in self.regressors
+            super()._predict(regressor, X).flatten()[0] for regressor in regressors
         ]])
 
     @override
@@ -293,19 +305,14 @@ class PerFeatureEmulator(Emulator):
                 "input": self.training_set["input"][train_index],
                 "target": self.training_set["target"][train_index],
             }
-            mse = []
-            for feature_index, regressor in enumerate(temp_regressors):
-                regressor.fit(
-                    temp_training_set["input"],
-                    temp_training_set["target"][:, feature_index]
-                )
-                mse.append(
-                    self.training_set["target"][test_index][:, feature_index] -
-                    regressor.predict(self.training_set["input"][test_index])[0]
-                )
+            temp_regressors = self._fit(temp_regressors, temp_training_set)
+            mse = (
+                self._training_set["target"][test_index][0] -
+                self._predict(temp_regressors, X=self.training_set["input"][test_index])[0]
+            )
 
-            mse = np.asarray(mse).squeeze()
-            mse_frac = mse / self.training_set["target"][test_index][0]
+            mse_frac = mse / self._training_set["target"][test_index][0]
+
             all_mse.append(mse)
             all_mse_frac.append(mse_frac)
 
