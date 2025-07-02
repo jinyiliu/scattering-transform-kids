@@ -26,10 +26,6 @@ class Emulator:
         assert "input" in training_set.keys()
         assert "target" in training_set.keys()
 
-        self.n_samples = training_set["input"].shape[0]
-        self.n_parameters = training_set["input"].shape[1]
-        self.n_features = training_set["target"].shape[1]
-
         self.input_scaler = input_scaler
         self.target_scaler = target_scaler
 
@@ -50,6 +46,10 @@ class Emulator:
         ):
             if scaler is not None:
                 self.training_set[key] = scaler.fit_transform(self._training_set[key])
+
+        self.n_samples = self.training_set["input"].shape[0]
+        self.n_parameters = self.training_set["input"].shape[1]
+        self.n_features = self.training_set["target"].shape[1]
 
 
     def fit(self):
@@ -284,9 +284,16 @@ class PerFeatureEmulator(Emulator):
     @override
     def _predict(self, regressors, X):
         # FIXME only works for one set of input parameters
-        return np.array([[
-            super()._predict(regressor, X).flatten()[0] for regressor in regressors
+        if self.input_scaler is not None:
+            X = self.input_scaler.transform(X)
+
+        Y = np.array([[
+            regressor.predict(X)[0] for regressor in regressors
         ]])
+        if self.target_scaler is not None:
+            Y = self.target_scaler.inverse_transform(Y)
+
+        return Y
 
     @override
     def validation(self):
