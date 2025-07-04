@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 from torch.fft import fft2, ifft2
+from torch.nn import ZeroPad2d
 from torchvision.transforms.functional import resize, InterpolationMode
 from numpy.typing import NDArray
 from scatterlens.wavelets import Morlet2D
@@ -11,10 +12,10 @@ from scatterlens.wavelets import Morlet2D
 
 class Scattering2D(object):
     def __init__(
-            self, M: int, N: int, J: int, L: int, device="cpu",
+            self, M: int, N: int, J: int, L: int, padding: int=0, device="cpu",
             filter_bank: dict[str, torch.Tensor] | str | None=None,
             dtype: torch.dtype=torch.float64, downsample_algo: bool=True,
-            return_I1: bool=False,):
+            return_I1: bool=False):
         """Docstring.
 
         Args:
@@ -22,6 +23,7 @@ class Scattering2D(object):
             N:
             J:
             L:
+            padding: The size of zero padding in pixels.
             filter_bank: The selected wavelets to be used for scattering.
                 If str, will load the filter_bank using `torch.load`. The dict
                 contain two keys: `psi` and `phi`. `psi` corresponds to a
@@ -43,6 +45,13 @@ class Scattering2D(object):
         self.dtype = dtype
         self.downsample_algo = downsample_algo
         self.return_I1 = return_I1
+
+        if padding:
+            M += 2 * padding
+            N += 2 * padding
+            self.padding = ZeroPad2d(padding=padding)
+        else:
+            self.padding = None
 
         match filter_bank:
             case None:
@@ -101,6 +110,9 @@ class Scattering2D(object):
             assert images.dim() == 3
         num_images = images.shape[0]
 
+        if self.padding:
+            images = self.padding(images)
+
         S0 = torch.zeros((num_images, 1), dtype=self.dtype)
         S1 = torch.zeros((num_images, J, L), dtype=self.dtype)
         S2 = torch.zeros((num_images, J, J, L, L), dtype=self.dtype)
@@ -113,6 +125,7 @@ class Scattering2D(object):
         S0[:, 0] = images.mean(dim=(-2, -1))
 
         mask, fsky = self._read_mask(mask=mask)
+        assert mask.shape[-2:] == images.shape[-2:]
         images_f = fft2(images * mask)  # the Fourier of images
 
         if not large_batch:
@@ -182,8 +195,10 @@ class Scattering2D(object):
             assert mask.dim() in (2, 3)
 
             if mask.dim() == 2:
-                assert mask.shape == (self.M, self.N)
                 mask = mask[None, :, :]
+
+            if self.padding:
+                mask = self.padding(mask)
         else:
             mask = torch.ones((1, self.M, self.N), dtype=self.dtype)
 
