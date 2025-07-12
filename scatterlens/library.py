@@ -7,6 +7,7 @@ import pandas as pd
 from torch.nn import ZeroPad2d
 from glob import glob
 from typing import Sequence
+from abc import abstractmethod
 
 from scatterlens.scattering2d import Scattering2D
 from scatterlens.wavelets import Morlet2D
@@ -80,6 +81,7 @@ class _StLibrary:
             )
 
 
+    @abstractmethod
     def get_savepath(self, **kwargs):
         raise NotImplementedError("Define this function in the child class.")
 
@@ -308,6 +310,7 @@ class CosmolStLibrary(_StLibrary):
 
     def get_ml_training_set(
             self,
+            region: ArrayLike | str | None=None,
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
@@ -329,7 +332,7 @@ class CosmolStLibrary(_StLibrary):
                     cosmol=cosmol,
                     zbin1=zbin1,
                     zbin2=zbin2,
-                    region=None,
+                    region=region,
                     region_weights=region_weights,
                     LOS=None,
                     j_start=j_start,
@@ -451,7 +454,18 @@ class CovStLibrary(_StLibrary):
             decorrelated_S2: bool=True,
             norm: bool=True,
     ):
-        """Return the covariance matrix."""
+        """Return the covariance matrix.
+
+        Args:
+            zbin_pairs:
+            j_start:
+            j_end:
+            j2_equals_j1:
+            region:
+            drop_S0:
+            decorrelated_S2:
+            norm: If True, will return the normalised covariance matrix.
+        """
         assert hasattr(self, "sims")
 
         for zpair_ind, (zbin1, zbin2) in enumerate(zbin_pairs):
@@ -526,7 +540,9 @@ class FilterLibrary:
                             region, M, N, J, L, str(dtype).split('.')[-1]))
                     )
             else:
-                raise AttributeError("J and L must not be None when `region_MN` is given.")
+                raise ValueError("J and L must not be None when `region_MN` is given.")
+        else:
+            raise ValueError("region_MN must be provided.")
 
 
     def get_savepath(self, region: int):

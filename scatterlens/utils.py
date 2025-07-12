@@ -1,6 +1,6 @@
 import multiprocessing
 import numpy as np
-from pymaster.utils import mask_apodization_flat
+from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
 from tqdm import tqdm
 
 def mp_wapper_calc_scoef(stlib, *args):
@@ -84,4 +84,4 @@ def mask_apodization(
     lx = xresol * mask.shape[0] / 180 / 60
     ly = yresol * mask.shape[1] / 180 / 60
     aposcale_deg = aposcale / 60
-    return mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
+    return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
