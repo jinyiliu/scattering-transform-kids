@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
+from torch.nn import ZeroPad2d
 from glob import glob
 from typing import Sequence
 
@@ -13,12 +14,13 @@ from scatterlens.utils import mask_apodization
 
 
 def _get_Scattering2D_per_region(
-        region_MN: dict[int, tuple[int, int]], filterlib=None, **kwargs
+        region_MN: dict[int, tuple[int, int]], padding: int=0, filterlib=None, **kwargs
 ) -> dict[int, Scattering2D]:
     """Return a dict of Scattering2D instances for each region.
 
     Args:
         region_MN: The image size of each region.
+        padding:
         filterlib: The scatterlens.library.FilterLibrary instance.
         **kwargs: The keyword arguments for initialising Scattering2D.
     """
@@ -29,7 +31,7 @@ def _get_Scattering2D_per_region(
             filter_bank = filterlib.get_savepath(region=region)
         else:
             filter_bank = None
-        ret[region] = Scattering2D(M=M, N=N, filter_bank=filter_bank, **kwargs)
+        ret[region] = Scattering2D(M=M, N=N, padding=padding, filter_bank=filter_bank, **kwargs)
     return ret
 
 
@@ -40,7 +42,8 @@ class _StLibrary:
             filterlib=None,
             masklib=None,
             sims=None,
-            **kwargs):
+            padding: int=0,
+            **St2Dkwargs):
         """Library to store the calculated coefficients for different
         cosmologies.
 
@@ -51,11 +54,12 @@ class _StLibrary:
             masklib: The scatterlens.library.MaskLibrary instance. If None, will
                 calculate the mask on the fly.
             sims: Simulation class.
-            **kwargs: The keyword arguments for initialising Scattering2D.
+            **St2Dkwargs: The keyword arguments for initialising Scattering2D.
         """
         self.libdir = libdir
         self.filterlib = filterlib
         self.masklib = masklib
+        self.padding = padding
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
 
@@ -69,7 +73,11 @@ class _StLibrary:
             assert hasattr(sims, "region_MN")
 
             self.ST = _get_Scattering2D_per_region(
-                sims.region_MN, filterlib=filterlib, **kwargs)
+                region_MN=sims.region_MN,
+                padding=padding,
+                filterlib=filterlib,
+                **St2Dkwargs,
+            )
 
 
     def get_savepath(self, **kwargs):
@@ -210,8 +218,9 @@ class CosmolStLibrary(_StLibrary):
             filterlib=None,
             masklib=None,
             sims=None,
-            **kwargs):
-        super().__init__(libdir, filterlib, masklib, sims, **kwargs)
+            padding: int=0,
+            **St2Dkwargs):
+        super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
         self.fname = "SCOEF_{}_Cosmol{}_ZB{}xZB{}_R{}.pt"
 
 
@@ -361,8 +370,9 @@ class CovStLibrary(_StLibrary):
             filterlib=None,
             masklib=None,
             sims=None,
-            **kwargs):
-        super().__init__(libdir, filterlib, masklib, sims, **kwargs)
+            padding: int=0,
+            **St2Dkwargs):
+        super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
         self.fname = "SCOEF_{}_ZB{}xZB{}_R{}.pt"
 
 
@@ -490,8 +500,11 @@ class CovStLibrary(_StLibrary):
 class FilterLibrary:
     def __init__(
             self, libdir: os.PathLike | str,
-            J: int | None=None, L: int | None=None, dtype: torch.dtype | None=None,
-            region_MN: dict[int, tuple[int, int]] | None=None):
+            J: int | None=None, L: int | None=None,
+            dtype: torch.dtype | None=None,
+            region_MN: dict[int, tuple[int, int]] | None=None,
+            padding: int=0,
+    ):
         """Library to store the filters in different regions."""
         self.libdir = libdir
         if not os.path.exists(self.libdir):
@@ -504,6 +517,9 @@ class FilterLibrary:
                 self.fname = "Morlet2Dfilters_R{}_M{}N{}J{}L{}_{}.pt"
                 for region in region_MN.keys():
                     M, N = region_MN[region]
+                    if padding:
+                        M += 2*padding
+                        N += 2*padding
                     fb = Morlet2D(M, N, J, L).gen_filter_bank(dtype=dtype)
                     torch.save(fb, os.path.join(
                         libdir, self.fname.format(
@@ -533,6 +549,7 @@ class MaskLibrary:
             aposcale: float | None=None,
             dtype: torch.dtype | None=None,
             sims=None,
+            padding: int=0,
     ):
         """Library to store the masks for different regions."""
         self.libdir = libdir
@@ -569,6 +586,10 @@ class MaskLibrary:
 
                 if mask.dtype != dtype:
                     mask = mask.to(dtype)
+
+                if padding:
+                    mask = ZeroPad2d(padding=padding).padding(mask)
+
                 torch.save(mask, os.path.join(
                     libdir, self.fname.format(region, *sims.region_MN[region]))
                 )
