@@ -565,9 +565,13 @@ class MaskLibrary:
             aposcale: float | None=None,
             dtype: torch.dtype | None=None,
             sims=None,
-            padding: int=0,
     ):
-        """Library to store the masks for different regions."""
+        """Library to store the masks for different regions.
+
+        Notes:
+            MaskLibrary does not provide padding option as the Scattering2D
+            class will handle both image and mask paddings.
+        """
         self.libdir = libdir
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
@@ -602,9 +606,6 @@ class MaskLibrary:
 
                 if mask.dtype != dtype:
                     mask = mask.to(dtype)
-
-                if padding:
-                    mask = ZeroPad2d(padding=padding).padding(mask)
 
                 torch.save(mask, os.path.join(
                     libdir, self.fname.format(region, *sims.region_MN[region]))
