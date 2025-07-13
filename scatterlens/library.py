@@ -541,8 +541,6 @@ class FilterLibrary:
                     )
             else:
                 raise ValueError("J and L must not be None when `region_MN` is given.")
-        else:
-            raise ValueError("region_MN must be provided.")
 
 
     def get_savepath(self, region: int):

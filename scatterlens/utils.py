@@ -12,35 +12,40 @@ def mp_wapper_calc_scoef(stlib, *args):
 
 
 def run_mp_scattering(
-        cross_redshift_bins: list[tuple[int, int]],
-        regions: list[str],
         cosmolstlib=None,
-        cosmols: list | None=None,
         covstlib=None,
+        processes: int=1,
 ):
-    """Function to run the scatter calculation using multiprocessing."""
-    assert (cosmolstlib and cosmols) or covstlib
+    """Function to run the scatter calculation using multiprocessing.
+
+    Args:
+        cosmolstlib: Instance of scatterlens.library.CosmolstLibrary.
+        covstlib: Instance of scatterlens.library.CovstLibrary.
+        processes: Number of processes to use.
+    """
+    if not (cosmolstlib or covstlib):
+        raise ValueError("Must specify at least one cosmolstlib or covstlib")
 
     args_list = []
     if cosmolstlib:
         cosmo_args_list = [
             (cosmolstlib, cosmol, zbin1, zbin2, region)
-            for cosmol in cosmols
-            for (zbin1, zbin2) in cross_redshift_bins
-            for region in regions
+            for cosmol in cosmolstlib.sims.cosmol_indices
+            for (zbin1, zbin2) in cosmolstlib.sims.cross_zbins
+            for region in cosmolstlib.sims.region_indices
         ]
         args_list += cosmo_args_list
 
     if covstlib:
         cov_args_list = [
             (covstlib, zbin1, zbin2, region)
-            for (zbin1, zbin2) in cross_redshift_bins
-            for region in regions
+            for (zbin1, zbin2) in covstlib.sims.cross_zbins
+            for region in covstlib.sims.region_indices
         ]
         args_list += cov_args_list
 
     multiprocessing.set_start_method("spawn")
-    pool = multiprocessing.Pool(processes=5)
+    pool = multiprocessing.Pool(processes=processes)
 
     async_results = [
         pool.apply_async(mp_wapper_calc_scoef, args) for args in args_list
