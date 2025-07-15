@@ -73,7 +73,7 @@ class Emulator:
             )
             mse = (
                 self._training_set["target"][test_index][0] -
-                self._predict(temp_regressor, X=self.training_set["input"][test_index])[0]
+                self._predict(temp_regressor, X=self._training_set["input"][test_index])[0]
             )
             mse_frac = mse / self._training_set["target"][test_index][0]
 
@@ -244,6 +244,38 @@ class S1S2Emulator(Emulator):
         return S1S2
 
 
+class PerZbincomboEmulator(Emulator):
+    def __init__(
+            self,
+            training_set: dict[str, torch.Tensor],
+            J: int,
+            n_zbincombo: int,
+            regressor_type=GaussianProcessRegressor,
+            **regressor_args,
+    ):
+        super().__init__(training_set, regressor_type, **regressor_args)
+        if n_zbincombo:
+            self.n_zbincombo = n_zbincombo
+        elif J:
+            self._J = J
+            self.n_zbincombo = self.n_features // (self.n_S1 + self.n_S2)
+        else:
+            raise AssertionError("J or n_zbincombo must be specified.")
+
+        self.regressors = [
+            regressor_type(**regressor_args) for _ in range(self.n_features)
+        ]
+
+    @property
+    def n_S1(self):
+        return self._J
+
+    @property
+    def n_S2(self):
+        return (self._J * (self._J + 1)) // 2
+
+
+
 
 class PerFeatureEmulator(Emulator):
     def __init__(
@@ -315,7 +347,7 @@ class PerFeatureEmulator(Emulator):
             temp_regressors = self._fit(temp_regressors, temp_training_set)
             mse = (
                 self._training_set["target"][test_index][0] -
-                self._predict(temp_regressors, X=self.training_set["input"][test_index])[0]
+                self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
             )
 
             mse_frac = mse / self._training_set["target"][test_index][0]
