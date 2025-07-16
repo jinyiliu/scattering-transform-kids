@@ -100,42 +100,38 @@ class S1S2Emulator(Emulator):
             self,
             training_set: dict[str, torch.Tensor],
             J: int,
+            input_scaler=None,
+            target_scaler=None,
             per_zbincombo_emulator: bool=False,
             regressor_type=GaussianProcessRegressor,
             **regressor_args,
     ):
-        """
+        """Construct separate S1, S2 emulators.
 
         Args:
             training_set:
-            J: Number of scattering scales
-            per_zbincombo_emulator: If True, trains separate emulators for each
-                redshift bin combination (e.g., (1,1), (1,2), (1,2,3), ...).
-                Defaults to False.
+            J: Number of scattering scales. This is used to divide training
+                target data vector into S1, S2 components.
+            per_zbincombo_emulator: If True, trains separate S1, S2 emulators
+                for each redshift bin combination. Defaults to False.
             regressor_type:
             **regressor_args:
         """
-        super().__init__(training_set, regressor_type, **regressor_args)
-        self._J = J
-        if self.n_features % (self.n_S1 + self.n_S2) != 0:
-            raise ValueError
-        self.n_zbincombo = self.n_features // (self.n_S1 + self.n_S2)
+        super().__init__(
+            training_set, input_scaler, target_scaler, regressor_type, **regressor_args
+        )
+
+        self.J = J
+        self.n_S1 = J
+        self.n_S2 = J * (J + 1) // 2
         self.per_zbincombo_emulator = per_zbincombo_emulator
 
-        self.n_regressors = 2
-        if self.per_zbincombo_emulator:
-            self.n_regressors *= self.n_zbincombo
+        if self.n_features % (self.n_S1 + self.n_S2) == 0:
+            self.n_zbincombo = self.n_features // (self.n_S1 + self.n_S2)
+        else:
+            raise ValueError("Invalid J value provided.")
 
         self.regressors = self._create_regressors()
-
-
-    @property
-    def n_S1(self):
-        return self._J
-
-    @property
-    def n_S2(self):
-        return (self._J * (self._J + 1)) // 2
 
     @override
     def fit(self):
@@ -162,12 +158,12 @@ class S1S2Emulator(Emulator):
             self._fit(temp_regressors, temp_training_set)
 
             mse = (
-                self.training_set["target"][test_index][0] -
+                self._training_set["target"][test_index][0] -
                 self._predict(
                     regressors=temp_regressors,
-                    X=self.training_set["input"][test_index])[0]
+                    X=self._training_set["input"][test_index])[0]
             )
-            mse_frac = mse / self.training_set["target"][test_index][0]
+            mse_frac = mse / self._training_set["target"][test_index][0]
 
             all_mse.append(mse)
             all_mse_frac.append(mse_frac)
@@ -228,6 +224,10 @@ class S1S2Emulator(Emulator):
 
 
     def _predict(self, regressors, X):
+        # FIXME only works for one set of input parameters
+        if self.input_scaler is not None:
+            X = self.input_scaler.transform(X)
+
         if self.per_zbincombo_emulator:
             S1 = np.vstack([
                 regressor.predict(X)[0] for regressor in regressors[0]
@@ -236,12 +236,15 @@ class S1S2Emulator(Emulator):
                 regressor.predict(X)[0] for regressor in regressors[1]
             ]).reshape(len(X), self.n_zbincombo, self.n_S2)
         else:
-            # FIXME only works for one set of input parameters
             S1 = regressors[0].predict(X).reshape(len(X), self.n_zbincombo, self.n_S1)
             S2 = regressors[1].predict(X).reshape(len(X), self.n_zbincombo, self.n_S2)
 
-        S1S2 = np.concatenate((S1, S2), axis=-1).reshape(len(X), self.n_features)
-        return S1S2
+        Y = np.concatenate((S1, S2), axis=-1).reshape(len(X), self.n_features)
+
+        if self.target_scaler is not None:
+            Y = self.target_scaler.inverse_transform(Y)
+
+        return Y
 
 
 class PerZbincomboEmulator(Emulator):
@@ -360,12 +363,3 @@ class PerFeatureEmulator(Emulator):
         return avg_mse, all_mse, avg_mse_frac, all_mse_frac
 
 
-class PolynomialRegressor:
-    def __init__(self):
-        pass
-
-    def fit(self):
-        pass
-
-    def predict(self, X):
-        pass
