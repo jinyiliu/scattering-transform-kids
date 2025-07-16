@@ -252,30 +252,93 @@ class PerZbincomboEmulator(Emulator):
             self,
             training_set: dict[str, torch.Tensor],
             J: int,
-            n_zbincombo: int,
+            input_scaler=None,
+            target_scaler=None,
             regressor_type=GaussianProcessRegressor,
             **regressor_args,
     ):
-        super().__init__(training_set, regressor_type, **regressor_args)
-        if n_zbincombo:
-            self.n_zbincombo = n_zbincombo
-        elif J:
-            self._J = J
+        super().__init__(
+            training_set, input_scaler, target_scaler, regressor_type, **regressor_args,
+        )
+
+        self.J = J
+        self.n_S1 = J
+        self.n_S2 = J * (J + 1) // 2
+
+        if self.n_features % (self.n_S1 + self.n_S2) == 0:
             self.n_zbincombo = self.n_features // (self.n_S1 + self.n_S2)
         else:
-            raise AssertionError("J or n_zbincombo must be specified.")
+            raise ValueError("Invalid J value provided.")
 
         self.regressors = [
-            regressor_type(**regressor_args) for _ in range(self.n_features)
+            regressor_type(**regressor_args) for _ in range(self.n_zbincombo)
         ]
 
-    @property
-    def n_S1(self):
-        return self._J
+    @override
+    def fit(self):
+        self._fit(self.regressors, self.training_set)
 
-    @property
-    def n_S2(self):
-        return (self._J * (self._J + 1)) // 2
+    @override
+    def predict(self, X):
+        return self._predict(self.regressors, X)
+
+    @override
+    def validation(self):
+        loo = LeaveOneOut()
+
+        all_mse = []
+        all_mse_frac = []
+
+        for i, (train_index, test_index) in enumerate(
+                loo.split(self.training_set["input"])):
+            temp_regressors = [
+                self.regressor_type(**self.regressor_args)
+                for _ in range(self.n_zbincombo)
+            ]
+            temp_training_set = {
+                "input": self.training_set["input"][train_index],
+                "target": self.training_set["target"][train_index],
+            }
+            temp_regressors = self._fit(temp_regressors, temp_training_set)
+            mse = (
+                self._training_set["target"][test_index][0] -
+                self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            )
+
+            mse_frac = mse / self._training_set["target"][test_index][0]
+
+            all_mse.append(mse)
+            all_mse_frac.append(mse_frac)
+
+        avg_mse = np.nanmean(all_mse, axis=0)
+        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
+        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+
+
+
+
+    def _fit(self, regressors, training_set):
+        target_array = training_set["target"].reshape(
+            -1, self.n_zbincombo, self.n_S1 + self.n_S2
+        )
+        trained_regressors = [
+            regressor.fit(
+                training_set["input"], target_array[:, i, :]
+            ) for i, regressor in enumerate(regressors)
+        ]
+        return trained_regressors
+
+    def _predict(self, regressors, X):
+        if self.input_scaler is not None:
+            X = self.input_scaler.transform(X)
+
+        Y = np.hstack([
+            regressor.predict(X)[0] for regressor in regressors
+        ])[None, :]
+
+        if self.target_scaler is not None:
+            Y = self.target_scaler.inverse_transform(Y)
+        return Y
 
 
 
