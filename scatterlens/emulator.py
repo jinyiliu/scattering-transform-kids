@@ -6,13 +6,10 @@ from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import LeaveOneOut
-from sklearn.linear_model import LinearRegression as LinearRegressor
 
 # Part of this code is copied from Lars.
 # Source: https://github.com/ljabbo/kids-persistent-homology
 
-
-kernels = [RBF,]
 
 class Emulator:
     def __init__(
@@ -59,11 +56,17 @@ class Emulator:
     def predict(self, X):
         return self._predict(self.regressor, X)
 
-    def validation(self):
+    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
+        """Perform leave-one-out cross-validation on the training set.
+
+        Args:
+            return_residual_error: If True, returns residual error which is
+                the difference between the predicted and true values. If False,
+                returns predicted value divided by the true value.
+        """
         loo = LeaveOneOut()
 
-        all_mse = []
-        all_mse_frac = []
+        ALL_MSE = []
 
         for i, (train_index, test_index) in enumerate(loo.split(self.training_set["input"])):
             temp_regressor = self.regressor_type(**self.regressor_args)
@@ -71,18 +74,16 @@ class Emulator:
                 self.training_set["input"][train_index],
                 self.training_set["target"][train_index],
             )
-            mse = (
-                self._training_set["target"][test_index][0] -
-                self._predict(temp_regressor, X=self._training_set["input"][test_index])[0]
-            )
-            mse_frac = mse / self._training_set["target"][test_index][0]
+            mse = self._predict(temp_regressor, X=self._training_set["input"][test_index])[0]
 
-            all_mse.append(mse)
-            all_mse_frac.append(mse_frac)
+            if return_residual_error:
+                mse -= self._training_set["target"][test_index][0]
+            else:
+                mse /= self._training_set["target"][test_index][0]
 
-        avg_mse = np.nanmean(all_mse, axis=0)
-        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
-        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+            ALL_MSE.append(mse)
+
+        return ALL_MSE
 
     def _predict(self, regressor, X):
         if self.input_scaler is not None:
@@ -142,11 +143,10 @@ class S1S2Emulator(Emulator):
         return self._predict(regressors=self.regressors, X=X)
 
     @override
-    def validation(self):
+    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        all_mse = []
-        all_mse_frac = []
+        ALL_MSE = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -155,22 +155,17 @@ class S1S2Emulator(Emulator):
                 "input": self.training_set["input"][train_index],
                 "target": self.training_set["target"][train_index],
             }
-            self._fit(temp_regressors, temp_training_set)
+            temp_regressors = self._fit(temp_regressors, temp_training_set)
+            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
 
-            mse = (
-                self._training_set["target"][test_index][0] -
-                self._predict(
-                    regressors=temp_regressors,
-                    X=self._training_set["input"][test_index])[0]
-            )
-            mse_frac = mse / self._training_set["target"][test_index][0]
+            if return_residual_error:
+                mse -= self._training_set["target"][test_index][0]
+            else:
+                mse /= self._training_set["target"][test_index][0]
 
-            all_mse.append(mse)
-            all_mse_frac.append(mse_frac)
+            ALL_MSE.append(mse)
 
-        avg_mse = np.nanmean(all_mse, axis=0)
-        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
-        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+        return ALL_MSE
 
 
     def _create_regressors(self) -> list[BaseEstimator] | list[list[BaseEstimator]]:
@@ -283,11 +278,10 @@ class PerZbincomboEmulator(Emulator):
         return self._predict(self.regressors, X)
 
     @override
-    def validation(self):
+    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        all_mse = []
-        all_mse_frac = []
+        ALL_MSE = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -300,19 +294,16 @@ class PerZbincomboEmulator(Emulator):
                 "target": self.training_set["target"][train_index],
             }
             temp_regressors = self._fit(temp_regressors, temp_training_set)
-            mse = (
-                self._training_set["target"][test_index][0] -
-                self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
-            )
+            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
 
-            mse_frac = mse / self._training_set["target"][test_index][0]
+            if return_residual_error:
+                mse -= self._training_set["target"][test_index][0]
+            else:
+                mse /= self._training_set["target"][test_index][0]
 
-            all_mse.append(mse)
-            all_mse_frac.append(mse_frac)
+            ALL_MSE.append(mse)
 
-        avg_mse = np.nanmean(all_mse, axis=0)
-        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
-        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+        return ALL_MSE
 
 
 
@@ -394,11 +385,10 @@ class PerFeatureEmulator(Emulator):
         return Y
 
     @override
-    def validation(self):
+    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        all_mse = []
-        all_mse_frac = []
+        ALL_MSE = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -411,18 +401,15 @@ class PerFeatureEmulator(Emulator):
                 "target": self.training_set["target"][train_index],
             }
             temp_regressors = self._fit(temp_regressors, temp_training_set)
-            mse = (
-                self._training_set["target"][test_index][0] -
-                self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
-            )
+            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
 
-            mse_frac = mse / self._training_set["target"][test_index][0]
+            if return_residual_error:
+                mse -= self._training_set["target"][test_index][0]
+            else:
+                mse /= self._training_set["target"][test_index][0]
 
-            all_mse.append(mse)
-            all_mse_frac.append(mse_frac)
+            ALL_MSE.append(mse)
 
-        avg_mse = np.nanmean(all_mse, axis=0)
-        avg_mse_frac = np.nanmean(all_mse_frac, axis=0)
-        return avg_mse, all_mse, avg_mse_frac, all_mse_frac
+        return ALL_MSE
 
 
