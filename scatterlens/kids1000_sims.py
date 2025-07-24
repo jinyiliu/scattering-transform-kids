@@ -75,6 +75,12 @@ class CosmoSLICE(KiDS1000):
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
     cosmol_indices = list(range(-1, 25))
     LOS_indices = list(range(1, 51))
+    param_ranges = {
+        "Omega_m": [0.1, 0.55],
+        "S_8": [0.6, 0.9],
+        "h": [0.6, 0.9],
+        "w_0": [-2.0, 0.5],
+    }
 
     @staticmethod
     def get_sim_massmap(
