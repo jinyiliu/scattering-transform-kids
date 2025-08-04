@@ -1,10 +1,8 @@
 import os
 import torch
-import pickle
 import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
-from torch.nn import ZeroPad2d
 from glob import glob
 from typing import Sequence
 from abc import abstractmethod
@@ -458,6 +456,7 @@ class CovStLibrary(_StLibrary):
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             norm: bool=True,
+            return_mean_dv: bool=False,
     ):
         """Return the covariance matrix.
 
@@ -470,6 +469,7 @@ class CovStLibrary(_StLibrary):
             drop_S0:
             decorrelated_S2:
             norm: If True, will return the normalised covariance matrix.
+            return_mean_dv: If True, will return the mean data vector
         """
         assert hasattr(self, "sims")
 
@@ -501,9 +501,16 @@ class CovStLibrary(_StLibrary):
         scoef_tensor = scoef_tensor.flatten(start_dim=0, end_dim=1)
 
         if norm:
-            return torch.corrcoef(scoef_tensor)
+            cov = torch.corrcoef(scoef_tensor)
         else:
-            return torch.cov(scoef_tensor)
+            cov = torch.cov(scoef_tensor)
+
+        if return_mean_dv:
+            scoef_tensor = scoef_tensor.mean(dim=1, keepdim=False)
+            return cov, scoef_tensor
+        else:
+            return cov
+
 
     @staticmethod
     def cov2corr(cov: torch.Tensor) -> torch.Tensor:
