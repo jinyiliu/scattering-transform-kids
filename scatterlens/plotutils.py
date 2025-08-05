@@ -1,7 +1,9 @@
 import torch
 import numpy as np
+import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from typing import Sequence
 
 onecol_wth: float = 8.8
 median_wth: float = 12.0
@@ -177,7 +179,7 @@ class EmulationViz:
         cbar.set_label(param_label, fontsize=8)
 
         if savepath:
-            fig.savefig(savepath)
+            fig.savefig(savepath, bbox_inches="tight")
 
 
 
@@ -189,3 +191,114 @@ class STDataViz:
     @staticmethod
     def COV():
         pass
+
+
+class PosteriorViz:
+    @staticmethod
+    def corner(
+            samples: np.ndarray,
+            param_ranges: Sequence[list[float, float]] | None=None,
+            param_labels: Sequence[str] | None=None,
+            param_ticks: Sequence[Sequence[float]] | None=None,
+            figsize: float=median_wth,
+            savepath: str=None,
+    ):
+        """Plot corner plot of posterior distribution.
+
+        Args:
+            samples: Samples from the posterior distribution.
+            param_ranges: Parameter ranges for the posterior distribution.
+            param_labels: Labels for the parameters. If None, will use the keys
+                of param_ranges.
+            param_ticks: Ticks for the parameters.
+            figsize: Width of the figure in cm.
+            savepath:
+        """
+        n_params = samples.shape[1]
+
+        if param_ranges is None:
+            param_ranges = np.vstack([samples.min(axis=0), samples.max(axis=0)]).T
+
+        if param_ticks is None:
+            param_ticks = [
+                np.linspace(
+                    start=minv - (maxv - minv) / 8,
+                    stop=maxv + (maxv - minv) / 8,
+                    num=5,
+                )[1:-1] for minv, maxv in param_ranges
+            ]
+
+        mpl.rcParams["figure.constrained_layout.use"] = False
+        mpl.rcParams["xtick.top"] = False
+        mpl.rcParams["ytick.right"] = False
+
+        fig, axes = plt.subplots(
+            figsize=cm2inch(figsize, figsize),
+            ncols=n_params,
+            nrows=n_params,
+        )
+        fig.subplots_adjust(hspace=0.0, wspace=0.0)
+
+        axes_diag = np.diag(axes)
+        axes_lower = np.tril(axes, k=-1)
+        axes_upper = np.triu(axes, k=1)
+
+        for ax in axes_upper.flatten():
+            if isinstance(ax, plt.Axes):
+                ax.axis("off") # clear upper triangle axes
+
+        for i, ax in enumerate(axes_diag):
+            samples_i = samples[:, i]
+            if isinstance(ax, plt.Axes):
+                sns.kdeplot(samples_i, ax=ax)
+                ax.set_xlim(param_ranges[i])
+                ax.set_xticks(param_ticks[i])
+                ax.set_xticklabels([])
+                ax.set_yticks([])
+                ax.set_yticklabels([])
+                # TODO use ax.tick_params to set tick properties
+
+        for i in range(n_params):
+            for j in range(n_params):
+                ax = axes_lower[i, j]
+                if isinstance(ax, plt.Axes):
+                    sns.histplot(
+                        x=samples[:, j],
+                        y=samples[:, i],
+                        ax=ax,
+                    )
+                    ax.set_xlim(param_ranges[j])
+                    ax.set_ylim(param_ranges[i])
+                    ax.set_xticks(param_ticks[j])
+                    ax.set_xticklabels([])
+                    ax.set_yticks(param_ticks[i])
+                    ax.set_yticklabels([])
+                    # TODO use ax.tick_params to set tick properties
+
+        for ax in axes.flatten():
+            ax.set_xlabel("") # clear x-axis labels
+            ax.set_ylabel("")
+
+        # Add x-tick labels and y-axis labels for the bottom row
+        for i, ax in enumerate(axes[-1, :]):
+            if param_labels is not None:
+                ax.set_xlabel(param_labels[i])
+            if param_ticks is not None:
+                ax.set_xticklabels(
+                    [f"${tick:.2g}$" for tick in param_ticks[i]],
+                    fontsize=8,
+                )
+
+        # Add y-tick labels and y-axis labels for the leftmost column
+        for i, ax in enumerate(axes[:, 0]):
+            if i != 0:
+                if param_labels is not None:
+                    ax.set_ylabel(param_labels[i])
+                if param_ticks is not None:
+                    ax.set_yticklabels(
+                        [f"${tick:.2g}$" for tick in param_ticks[i]],
+                        fontsize=8,
+                    )
+
+        if savepath:
+            fig.savefig(savepath, bbox_inches="tight")
