@@ -1,8 +1,10 @@
 import torch
 import numpy as np
+import arviz as az
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 from typing import Sequence
 
 onecol_wth: float = 8.8
@@ -194,27 +196,45 @@ class STDataViz:
 
 
 class PosteriorViz:
+    # 1-sigma and 2-sigma confidence levels reference:
+    # https://corner.readthedocs.io/en/latest/pages/sigmas/
+    CONFIDENCE_LEVELS_1D = (0.682, 0.954)
+    CONFIDENCE_LEVELS_2D = (0.393, 0.864)
+
     @staticmethod
     def corner(
             samples: np.ndarray,
+            contour_color: str="olive",
             param_ranges: Sequence[list[float, float]] | None=None,
             param_labels: Sequence[str] | None=None,
             param_ticks: Sequence[Sequence[float]] | None=None,
             figsize: float=median_wth,
+            histplot_bivariate: bool=True,
+            histplot_diagonal: bool=False,
+            truths: Sequence[float] | None=None,
             savepath: str=None,
     ):
         """Plot corner plot of posterior distribution.
 
         Args:
             samples: Samples from the posterior distribution.
+            contour_color: Color of the contour lines and fill.
             param_ranges: Parameter ranges for the posterior distribution.
             param_labels: Labels for the parameters. If None, will use the keys
                 of param_ranges.
             param_ticks: Ticks for the parameters.
             figsize: Width of the figure in cm.
+            histplot_bivariate: Whether to plot bivariate histograms.
+            histplot_diagonal: Whether to plot histograms on the diagonal.
+            truths: Optional truth values for the parameters.
             savepath:
         """
+        # TODO support for multiple sample sets
         n_params = samples.shape[1]
+        n_colors = len(PosteriorViz.CONFIDENCE_LEVELS_2D)
+        colors = sns.light_palette(
+            color=contour_color, n_colors=n_colors + 2)[-n_colors:]
+        n_histbins = 50
 
         if param_ranges is None:
             param_ranges = np.vstack([samples.min(axis=0), samples.max(axis=0)]).T
@@ -247,25 +267,42 @@ class PosteriorViz:
             if isinstance(ax, plt.Axes):
                 ax.axis("off") # clear upper triangle axes
 
-        for i, ax in enumerate(axes_diag):
-            samples_i = samples[:, i]
-            if isinstance(ax, plt.Axes):
-                sns.kdeplot(samples_i, ax=ax)
-                ax.set_xlim(param_ranges[i])
-                ax.set_xticks(param_ticks[i])
-                ax.set_xticklabels([])
-                ax.set_yticks([])
-                ax.set_yticklabels([])
-                # TODO use ax.tick_params to set tick properties
-
-        for i in range(n_params):
+        for i in range(n_params): # lower triangle
             for j in range(n_params):
                 ax = axes_lower[i, j]
                 if isinstance(ax, plt.Axes):
-                    sns.histplot(
+                    if histplot_bivariate:
+                        sns.histplot(
+                            x=samples[:, j],
+                            y=samples[:, i],
+                            ax=ax,
+                            bins=n_histbins,
+                            binrange=(param_ranges[j], param_ranges[i]),
+                            cmap=sns.light_palette(color="darkgrey", as_cmap=True),
+                            zorder=-1,
+                        )
+                    levels = [1 - cfl for cfl in PosteriorViz.CONFIDENCE_LEVELS_2D[::-1]]
+                    sns.kdeplot(
                         x=samples[:, j],
                         y=samples[:, i],
                         ax=ax,
+                        levels=levels,
+                        color=contour_color,
+                        fill=True, # use matplotlib.axes.Axes.contourf
+                        colors=colors,
+                        alpha=0.7,
+                        extend="max",
+                        zorder=0,
+                    )
+                    sns.kdeplot(
+                        x=samples[:, j],
+                        y=samples[:, i],
+                        ax=ax,
+                        levels=levels,
+                        color=contour_color,
+                        fill=False,  # use matplotlib.axes.Axes.contour
+                        colors=colors,
+                        zorder=0,
                     )
                     ax.set_xlim(param_ranges[j])
                     ax.set_ylim(param_ranges[i])
@@ -274,6 +311,56 @@ class PosteriorViz:
                     ax.set_yticks(param_ticks[i])
                     ax.set_yticklabels([])
                     # TODO use ax.tick_params to set tick properties
+
+                    if truths is not None:
+                        ax.scatter(truths[j], truths[i], color="red", marker=".", zorder=10)
+
+        MAX_HDI = PosteriorViz.get_marginal_MAX_HDI(samples)
+
+        for i, ax in enumerate(axes_diag): # diagonal
+            samples_i = samples[:, i]
+            if isinstance(ax, plt.Axes):
+                if histplot_diagonal:
+                    sns.histplot(
+                        samples_i,
+                        ax=ax,
+                        bins=n_histbins,
+                        binrange=param_ranges[i],
+                        element="step",
+                        fill=True,
+                        color="lightgrey",
+                        stat="density",
+                        zorder=-2,
+                    )
+                sns.kdeplot(
+                    samples_i,
+                    ax=ax,color=contour_color,
+                    linewidth=1.6,
+                    zorder=0,
+                )
+                ax.margins(y=0.1)
+                ax.set_ylim(bottom=0.0)
+                MAX, (HDI_LEFT, HDI_RIGHT) = MAX_HDI[i]
+                ax.fill_betweenx(
+                    y=[0, ax.get_ylim()[1]],
+                    x1=HDI_LEFT,
+                    x2=HDI_RIGHT,
+                    color="lightgrey",
+                    zorder=-1,
+                )
+                ax.set_title(
+                    label=param_labels[i] + f" $={MAX:.2f}^{{+{HDI_RIGHT-MAX:.2f}}}_{{-{MAX-HDI_LEFT:.2f}}}$",
+                    fontsize=7,
+                )
+                ax.set_xlim(param_ranges[i])
+                ax.set_xticks(param_ticks[i])
+                ax.set_xticklabels([])
+                ax.set_yticks([])
+                ax.set_yticklabels([])
+                # TODO use ax.tick_params to set tick properties
+
+                if truths is not None:
+                    ax.axvline(truths[i], color="red", lw=0.6, zorder=10)
 
         for ax in axes.flatten():
             ax.set_xlabel("") # clear x-axis labels
@@ -302,3 +389,34 @@ class PosteriorViz:
 
         if savepath:
             fig.savefig(savepath, bbox_inches="tight")
+
+
+    @staticmethod
+    def get_marginal_MAX_HDI(samples: np.ndarray) -> list:
+        """Calculate the maximum of the 1D marginal distributions with the
+        highest density interval (HDI) for each parameter.
+
+        Args:
+            samples: Samples with shape (n_samples, n_params) or (n_samples,).
+        """
+        ret = []
+        if samples.ndim == 2:
+            samples = samples.T
+        else:
+            samples = samples[None, :]
+
+        for samples_i in samples:
+            KDE = gaussian_kde(samples_i)
+            x = np.linspace(np.min(samples_i), np.max(samples_i), num=500)
+            MAX = float(x[np.argmax(KDE(x))])
+
+            IDATA = az.from_dict(
+                posterior={"p": samples_i[None, :]},
+            )
+            HDI = az.hdi(IDATA, hdi_prob=PosteriorViz.CONFIDENCE_LEVELS_1D[0])["p"]
+            ret.append([MAX, (float(HDI[0]), float(HDI[1]))])
+
+        if samples.ndim == 2:
+            return ret
+        else:
+            return ret[0]
