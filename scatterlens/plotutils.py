@@ -6,12 +6,10 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from typing import Sequence
+import cmplstyle
+from cmplstyle import onecol_wth, median_wth, fullpg_wth
 
-onecol_wth: float = 8.8
-median_wth: float = 12.0
-fullpg_wth: float = 18.0
-
-plt.style.use("/data1/jliu/scattering-transform-kids/scatterlens/matplotlibrc")
+cmplstyle.use_builtin_mplstyle()
 
 def cm2inch(*args: float | int) -> float | tuple[float, ...]:
     if len(args)==1:
@@ -420,3 +418,8 @@ class PosteriorViz:
             return ret
         else:
             return ret[0]
+
+
+
+class MorletWaveletViz:
+    pass
