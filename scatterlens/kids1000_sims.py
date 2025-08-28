@@ -68,8 +68,8 @@ class KiDS1000:
         return isinstance(zbin, int) and 0 <= zbin <= 5
 
 
-class CosmoSLICE(KiDS1000):
-    simsname = "KiDS1000_CosmoSLICE"
+class CosmoSLICS(KiDS1000):
+    simsname = "KiDS1000_CosmoSLICS"
     simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmol{:d}"
     simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
@@ -91,11 +91,11 @@ class CosmoSLICE(KiDS1000):
             LOS: int,
     ) -> NDArray:
         assert (
-            CosmoSLICE.has_cosmol(cosmol)
+            CosmoSLICS.has_cosmol(cosmol)
             and KiDS1000.has_region(region)
             and KiDS1000.has_zbin(zbin1)
             and KiDS1000.has_zbin(zbin2)
-            and CosmoSLICE.has_LOS(LOS)
+            and CosmoSLICS.has_LOS(LOS)
         ), "Validation failed for one or more inputs."
 
         shapenoise = KiDS1000.zbin_to_ShapeNoise[zbin1]
@@ -103,14 +103,14 @@ class CosmoSLICE(KiDS1000):
         zbcut += f"_X_ZBcut{KiDS1000.zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
 
         if cosmol==-1:
-            simspath = CosmoSLICE.simspath_fid.format(shapenoise, zbcut)
+            simspath = CosmoSLICS.simspath_fid.format(shapenoise, zbcut)
         else:
-            simspath = CosmoSLICE.simspath.format(shapenoise, zbcut, cosmol)
+            simspath = CosmoSLICS.simspath.format(shapenoise, zbcut, cosmol)
 
         massmap = np.load(
             os.path.join(
                 _data_path, simspath,
-                CosmoSLICE.mapfname.format(shapenoise, LOS, region),
+                CosmoSLICS.mapfname.format(shapenoise, LOS, region),
             )
         )
         return massmap
@@ -122,7 +122,7 @@ class CosmoSLICE(KiDS1000):
             region: int,
             LOS: int,
     ) -> NDArray:
-        massmap = CosmoSLICE.get_sim_massmap(cosmol=-1, zbin1=zbin1,
+        massmap = CosmoSLICS.get_sim_massmap(cosmol=-1, zbin1=zbin1,
             zbin2=zbin2, LOS=LOS, region=region)
         return massmap
 
@@ -132,7 +132,7 @@ class CosmoSLICE(KiDS1000):
 
     @staticmethod
     def has_cosmol(cosmol: int) -> bool:
-        # SLICE simulation set has 25 wCDM cosmologies and one Lambda-CDM cosmology.
+        # SLICS simulation set has 25 wCDM cosmologies and one Lambda-CDM cosmology.
         # -1 points to fiducial cosmology
         return -1 <= cosmol <= 24
 
@@ -144,7 +144,7 @@ class CosmoSLICE(KiDS1000):
                 return _cosmologies.loc[25]
 
             if isinstance(cosmol, int):
-                assert CosmoSLICE.has_cosmol(cosmol)
+                assert CosmoSLICS.has_cosmol(cosmol)
                 if cosmol == -1:
                     return _cosmologies.loc[25]
                 else:
@@ -153,8 +153,8 @@ class CosmoSLICE(KiDS1000):
             return _cosmologies.loc[:25]
 
 
-class SLICE(KiDS1000):
-    simsname = "KiDS1000_SLICE"
+class SLICS(KiDS1000):
+    simsname = "KiDS1000_SLICS"
     simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
     LOS_indices = list(range(74, 293))
@@ -167,18 +167,18 @@ class SLICE(KiDS1000):
             KiDS1000.has_region(region)
             and KiDS1000.has_zbin(zbin1)
             and KiDS1000.has_zbin(zbin2)
-            and SLICE.has_LOS(LOS)
+            and SLICS.has_LOS(LOS)
         ), "Validation failed for one or more inputs."
         shapenoise = KiDS1000.zbin_to_ShapeNoise[zbin1]
         zbcut = f"ZBcut{KiDS1000.zbin_to_zrange[zbin1]}"
         zbcut += f"_X_ZBcut{KiDS1000.zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
 
-        simspath = SLICE.simspath.format(shapenoise, zbcut)
+        simspath = SLICS.simspath.format(shapenoise, zbcut)
 
         massmap = np.load(
             os.path.join(
                 _data_path, simspath,
-                SLICE.mapfname.format(shapenoise, LOS, region),
+                SLICS.mapfname.format(shapenoise, LOS, region),
             )
         )
         return massmap
