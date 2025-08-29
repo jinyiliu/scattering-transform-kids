@@ -2,6 +2,7 @@ import multiprocessing
 import numpy as np
 from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
 from tqdm import tqdm
+from itertools import combinations
 
 def mp_wapper_calc_scoef(stlib, *args):
     """Wapper function of scatter coefficients calculation for the use of
@@ -62,6 +63,22 @@ _tqdm_style = {
     "ascii": " =",
     "smoothing": 0.,
 }
+
+
+def create_zbin_combos(zbin_indices: list[int], r_max: int=np.inf) -> list[tuple[int, ...]]:
+    """Generate all redshift bin comibinations from single to multiple bins.
+
+    Example:
+        If the input is [1, 2, 3], the output will be:
+            [(1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
+    """
+    zbin_combos = []
+
+    for r in range(1, min(len(zbin_indices), r_max) + 1):
+        combos = combinations(zbin_indices, r)
+        zbin_combos.extend(combos)
+
+    return zbin_combos
 
 
 def mask_apodization(
