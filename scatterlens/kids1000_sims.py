@@ -104,22 +104,19 @@ class CosmoSLICS(KiDS1000):
     @staticmethod
     def get_sim_massmap(
             cosmol: int,
-            zbin1: int,
-            zbin2: int,
+            zbin_combo: tuple[int],
             region: int,
             LOS: int,
     ) -> NDArray:
         assert (
             CosmoSLICS.has_cosmol(cosmol)
             and KiDS1000.has_region(region)
-            and KiDS1000.has_zbin(zbin1)
-            and KiDS1000.has_zbin(zbin2)
+            and KiDS1000.has_zbin_combo(zbin_combo)
             and CosmoSLICS.has_LOS(LOS)
         ), "Validation failed for one or more inputs."
 
-        shapenoise = KiDS1000.zbin_to_ShapeNoise[zbin1]
-        zbcut = f"ZBcut{KiDS1000.zbin_to_zrange[zbin1]}"
-        zbcut += f"_X_ZBcut{KiDS1000.zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
+        shapenoise = KiDS1000.get_shapenoise(zbin_combo)
+        zbcut = KiDS1000.get_ZBcut(zbin_combo)
 
         if cosmol==-1:
             simspath = CosmoSLICS.simspath_fid.format(shapenoise, zbcut)
@@ -136,13 +133,12 @@ class CosmoSLICS(KiDS1000):
 
     @staticmethod
     def get_fid_massmap(
-            zbin1: int,
-            zbin2: int,
+            zbin_combo: tuple[int],
             region: int,
             LOS: int,
     ) -> NDArray:
-        massmap = CosmoSLICS.get_sim_massmap(cosmol=-1, zbin1=zbin1,
-            zbin2=zbin2, LOS=LOS, region=region)
+        massmap = CosmoSLICS.get_sim_massmap(
+            cosmol=-1, zbin_combo=zbin_combo, LOS=LOS, region=region)
         return massmap
 
     @staticmethod
