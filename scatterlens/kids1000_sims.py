@@ -3,28 +3,30 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from scatterlens.utils import create_zbin_combos
+
 _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
 
 class KiDS1000:
     resol = 2.344
     resol_unit = "arcmin"
     region_indices = list(range(1, 19))
-    zbin_indices = list(range(0, 6))
-    zbin_to_ShapeNoise = {
-        0: 0.265,
-        1: 0.270,
-        2: 0.258,
-        3: 0.273,
-        4: 0.254,
-        5: 0.270,
+    zbin_indices = list(range(1, 6))
+    _zbin_combo_to_ShapeNoise = {
+        (1,): 0.270,
+        (2,): 0.258,
+        (3,): 0.273,
+        (4,): 0.254,
+        (5,): 0.270,
+        (1, 2, 3, 4, 5): 0.265,
     }
-    zbin_to_zrange = {
-        0: "0.1-1.2",
-        1: "0.1-0.3",
-        2: "0.3-0.5",
-        3: "0.5-0.7",
-        4: "0.7-0.9",
-        5: "0.9-1.2",
+    _zbin_combo_to_zrange = {
+        (1,): "0.1-0.3",
+        (2,): "0.3-0.5",
+        (3,): "0.5-0.7",
+        (4,): "0.7-0.9",
+        (5,): "0.9-1.2",
+        (1, 2, 3, 4, 5): "0.1-1.2",
     }
     region_MN = {
         1: (127, 115),
@@ -47,25 +49,42 @@ class KiDS1000:
         18: (224, 159),
     }
 
-    cross_zbins: list[tuple[int, int]] = []
-    for zbin1 in zbin_indices:
-        for zbin2 in zbin_indices:
-            if zbin1 == 0:
-                if zbin2 == 0:
-                    cross_zbins.append((zbin1, zbin2))
-                else:
-                    continue
-            else:
-                if zbin2 >= zbin1:
-                    cross_zbins.append((zbin1, zbin2))
+    zbin_combos = create_zbin_combos(zbin_indices, r_max=2)
+    zbin_combos.append((1, 2, 3, 4, 5))
 
     @staticmethod
     def has_region(region: int) -> bool:
         return 1 <= region <= 18
 
     @staticmethod
-    def has_zbin(zbin: int) -> bool:
-        return isinstance(zbin, int) and 0 <= zbin <= 5
+    def has_zbin_combo(zbin_combo: tuple[int]) -> bool:
+        return zbin_combo in KiDS1000.zbin_combos
+
+    @staticmethod
+    def get_shapenoise(zbin_combo: tuple[int]) -> float:
+        """Get the shape noise value for a given zbin combination. This function
+        is only used when loading the simulation mass maps. For cross-zbin, the
+        noise value is taken from the first zbin.
+        """
+        match len(zbin_combo):
+            case 2:
+                return KiDS1000._zbin_combo_to_ShapeNoise[(zbin_combo[0],)]
+            case 1 | 5:
+                return KiDS1000._zbin_combo_to_ShapeNoise[zbin_combo]
+            case _:
+                raise ValueError("zbin_combo must have length 1, 2, or 5.")
+
+    @staticmethod
+    def get_ZBcut(zbin_combo: tuple[int]) -> str:
+        """Get the ZBcut string for a given zbin combination. This function is
+        only used when loading the simulation mass maps."""
+        match len(zbin_combo):
+            case 2:
+                return f"ZBcut{KiDS1000._zbin_combo_to_zrange[(zbin_combo[0],)]}_X_ZBcut{KiDS1000._zbin_combo_to_zrange[(zbin_combo[1],)]}"
+            case 1 | 5:
+                return f"ZBcut{KiDS1000._zbin_combo_to_zrange[zbin_combo]}"
+            case _:
+                raise ValueError("zbin_combo must have length 1, 2, or 5.")
 
 
 class CosmoSLICS(KiDS1000):
