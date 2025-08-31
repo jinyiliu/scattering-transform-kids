@@ -177,16 +177,14 @@ class SLICS(KiDS1000):
     LOS_indices.pop(198 - 74)
 
     @staticmethod
-    def get_sim_massmap(zbin1: int, zbin2: int, region: int, LOS: int) -> NDArray:
+    def get_sim_massmap(zbin_combo: tuple[int], region: int, LOS: int) -> NDArray:
         assert (
             KiDS1000.has_region(region)
-            and KiDS1000.has_zbin(zbin1)
-            and KiDS1000.has_zbin(zbin2)
+            and KiDS1000.has_zbin_combo(zbin_combo)
             and SLICS.has_LOS(LOS)
         ), "Validation failed for one or more inputs."
-        shapenoise = KiDS1000.zbin_to_ShapeNoise[zbin1]
-        zbcut = f"ZBcut{KiDS1000.zbin_to_zrange[zbin1]}"
-        zbcut += f"_X_ZBcut{KiDS1000.zbin_to_zrange[zbin2]}" if zbin2 != zbin1 else ""
+        shapenoise = KiDS1000.get_shapenoise(zbin_combo)
+        zbcut = KiDS1000.get_ZBcut(zbin_combo)
 
         simspath = SLICS.simspath.format(shapenoise, zbcut)
 
