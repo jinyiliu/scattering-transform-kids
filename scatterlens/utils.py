@@ -68,9 +68,15 @@ _tqdm_style = {
 def create_zbin_combos(zbin_indices: list[int], r_max: int=np.inf) -> list[tuple[int, ...]]:
     """Generate all redshift bin comibinations from single to multiple bins.
 
+    Args:
+        zbin_indices: List of redshift bin indices.
+        r_max: Maximum number of redshift bins in a combination.
+
     Example:
         If the input is [1, 2, 3], the output will be:
             [(1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
+        If the input is [1, 2, 3] and r_max=2, the output will be:
+            [(1,), (2,), (3,), (1, 2), (1, 3), (2, 3)]
     """
     zbin_combos = []
 
