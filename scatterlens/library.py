@@ -249,7 +249,7 @@ class CosmolStLibrary(_StLibrary):
 
     def get_savepath(self, cosmol: int, zbin_combo: tuple[int], region: int):
         """Return the savepath according to the given region, cosmology, and
-        redshift bins."""
+        zbin combination."""
         if hasattr(self, "sims"):
             fname = self.fname.format(
                 self.sims.simsname, "fid" if cosmol==-1 else cosmol,
@@ -394,31 +394,30 @@ class CovStLibrary(_StLibrary):
             padding: int=0,
             **St2Dkwargs):
         super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
-        self.fname = "SCOEF_{}_ZB{}xZB{}_R{}.pt"
+        self.fname = "SCOEF_{}_ZB{}_R{}.pt"
 
 
-    def get_savepath(self, zbin1: int, zbin2: int, region: int):
-        """Return the savepath according to the given region and redshift bins."""
+    def get_savepath(self, zbin_combo: tuple[int], region: int):
+        """Return the savepath according to the given region and zbin combination."""
         if hasattr(self, "sims"):
-            fname = self.fname.format(self.sims.simsname, zbin1, zbin2, region)
+            fname = self.fname.format(
+                self.sims.simsname, "".join(str(zb) for zb in zbin_combo), region)
         else:
-            fname_patt = "*_ZB{}xZB{}_R{}.pt".format(zbin1, zbin2, region)
+            fname_patt = "*_ZB{}_R{}.pt".format(
+                "".join(str(zb) for zb in zbin_combo), region)
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
 
 
-    def calc_sim_scoef(self, zbin1: int, zbin2: int, region: int):
-        """Calculate the scattering coefficients according to the given region
-        and redshift bins."""
-        return super().calc_sim_scoef(zbin1=zbin1, zbin2=zbin2, region=region)
+    def calc_sim_scoef(self, zbin_combo: tuple[int], region: int):
+        return super().calc_sim_scoef(zbin_combo=zbin_combo, region=region)
 
 
     def get_sim_scoef(
             self,
-            zbin1: int,
-            zbin2: int,
+            zbin_combo: tuple[int],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
             region_weights: ArrayLike | str | None="auto",
@@ -430,21 +429,17 @@ class CovStLibrary(_StLibrary):
             flatten: bool=True,
             return_type: str="dict",
     ):
-        """Return the scattering coefficients according to the given region,
-        cosmology, redshift bins, and LOS."""
-        assert zbin2 >= zbin1
-
+        """Return the scattering coefficients according to the given zbin
+        combination, averaging over the regions and LOS if given."""
         st_paths = []
         if region:
             if isinstance(region, int):
                 region = [region]
             for _region in region:
-                st_paths.append(self.get_savepath(zbin1, zbin2, _region))
+                st_paths.append(self.get_savepath(zbin_combo, _region))
         else:
-            pathname = "*_ZB{}xZB{}_*.pt".format(zbin1, zbin2)
+            pathname = "*_ZB{}_*.pt".format("".join(str(zb) for zb in zbin_combo))
             st_paths = glob(pathname=pathname, root_dir=self.libdir)
-            if len(st_paths) == 0:
-                raise FileNotFoundError
 
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
@@ -461,34 +456,32 @@ class CovStLibrary(_StLibrary):
 
     def get_cov(
             self,
-            zbin_pairs: list[tuple[int, int]]=None,
+            zbin_combos: list[tuple[int]]=None,
             j_start: int | None=None,
             j_end: int | None=None,
             region: int | Sequence[int] | None=None,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
-            norm: bool=True,
             return_mean_dv: bool=False,
     ):
         """Return the covariance matrix.
 
         Args:
-            zbin_pairs:
+            zbin_combos: List of zbin combinations to include. If None, will use all
             j_start:
             j_end:
             region:
             drop_S0:
             decorrelated_S2:
-            norm: If True, will return the normalised covariance matrix.
-            return_mean_dv: If True, will return the mean data vector
+            return_mean_dv: If True, will return the mean data vector of the
+                covariance dataset.
         """
         assert hasattr(self, "sims")
 
-        for zpair_ind, (zbin1, zbin2) in enumerate(zbin_pairs):
+        for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
             for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
                 scoef = self.get_sim_scoef(
-                    zbin1=zbin1,
-                    zbin2=zbin2,
+                    zbin_combo=zbin_combo,
                     region=region,
                     region_weights="auto",
                     LOS=LOS,
@@ -502,18 +495,14 @@ class CovStLibrary(_StLibrary):
                 )
                 if "scoef_tensor" not in locals():
                     scoef_tensor = torch.zeros(size=(
-                            len(zbin_pairs),
+                            len(zbin_combos),
                             len(scoef),
                             len(self.sims.LOS_indices),
                     ))
-                scoef_tensor[zpair_ind, :, LOS_ind] = scoef
+                scoef_tensor[zbin_combo_ind, :, LOS_ind] = scoef
 
         scoef_tensor = scoef_tensor.flatten(start_dim=0, end_dim=1)
-
-        if norm:
-            cov = torch.corrcoef(scoef_tensor)
-        else:
-            cov = torch.cov(scoef_tensor)
+        cov = torch.cov(scoef_tensor)
 
         if return_mean_dv:
             scoef_tensor = scoef_tensor.mean(dim=1, keepdim=False)
