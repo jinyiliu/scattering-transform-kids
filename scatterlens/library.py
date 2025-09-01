@@ -588,7 +588,7 @@ class MaskLibrary:
             sky_area = []
 
             for region in sims.region_MN.keys():
-                mass = sims.get_fid_massmap(zbin1=1, zbin2=1, LOS=1, region=region)
+                mass = sims.get_fid_massmap(zbin_combo=(1,), LOS=1, region=region)
                 mask_ = np.array(mass != 0., dtype=np.float64)
 
                 sky_area.append(mask_.sum() * pixel_area)
