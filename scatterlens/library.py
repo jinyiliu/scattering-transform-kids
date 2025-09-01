@@ -194,7 +194,7 @@ class _StLibrary:
                 return torch.hstack((S0, S1, S2))
 
 
-    def find_fname(self, fname_patt: str):
+    def glob_in_libdir(self, fname_patt: str):
         """Find the filename according to the given filename pattern."""
         matched = glob(pathname=fname_patt, root_dir=self.libdir)
         if not matched:
@@ -230,7 +230,7 @@ class CosmolStLibrary(_StLibrary):
         else:
             fname_patt = "*_Cosmol{}_ZB{}xZB{}_R{}.pt".format(
                 "fid" if cosmol==-1 else cosmol, zbin1, zbin2, region)
-            fname = self.find_fname(fname_patt=fname_patt)
+            fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
@@ -380,7 +380,7 @@ class CovStLibrary(_StLibrary):
             fname = self.fname.format(self.sims.simsname, zbin1, zbin2, region)
         else:
             fname_patt = "*_ZB{}xZB{}_R{}.pt".format(zbin1, zbin2, region)
-            fname = self.find_fname(fname_patt=fname_patt)
+            fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
