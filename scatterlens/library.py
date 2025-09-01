@@ -117,7 +117,6 @@ class _StLibrary:
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
-            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
@@ -166,9 +165,6 @@ class _StLibrary:
         end = j_end + 1 if j_end else None
         S1 = S1[j_start:end]
         S2 = S2[j_start:end, j_start:end]
-
-        if j2_equals_j1:
-            S2 = S2.diagonal(dim1=0, dim2=1).permute(2, 1, 0)
 
         if isotropic:
             S1 = S1.mean(dim=-1)
@@ -256,7 +252,6 @@ class CosmolStLibrary(_StLibrary):
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
-            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
@@ -286,7 +281,6 @@ class CosmolStLibrary(_StLibrary):
             region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
-            j2_equals_j1=j2_equals_j1,
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
@@ -312,7 +306,6 @@ class CosmolStLibrary(_StLibrary):
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
-            j2_equals_j1: bool=False,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             savepath: str | os.PathLike | None=None,
@@ -340,7 +333,6 @@ class CosmolStLibrary(_StLibrary):
                     LOS=None,
                     j_start=j_start,
                     j_end=j_end,
-                    j2_equals_j1=j2_equals_j1,
                     drop_S0=drop_S0,
                     isotropic=True,
                     flatten=True,
@@ -409,7 +401,6 @@ class CovStLibrary(_StLibrary):
             region_weights: ArrayLike | str | None="auto",
             j_start: int | None=None,
             j_end: int | None=None,
-            j2_equals_j1: bool=False,
             isotropic: bool=True,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
@@ -438,7 +429,6 @@ class CovStLibrary(_StLibrary):
             region_weights=region_weights,
             j_start=j_start,
             j_end=j_end,
-            j2_equals_j1=j2_equals_j1,
             isotropic=isotropic,
             drop_S0=drop_S0,
             decorrelated_S2=decorrelated_S2,
@@ -451,7 +441,6 @@ class CovStLibrary(_StLibrary):
             zbin_pairs: list[tuple[int, int]]=None,
             j_start: int | None=None,
             j_end: int | None=None,
-            j2_equals_j1: bool=False,
             region: int | Sequence[int] | None=None,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
@@ -464,7 +453,6 @@ class CovStLibrary(_StLibrary):
             zbin_pairs:
             j_start:
             j_end:
-            j2_equals_j1:
             region:
             drop_S0:
             decorrelated_S2:
@@ -483,7 +471,6 @@ class CovStLibrary(_StLibrary):
                     LOS=LOS,
                     j_start=j_start,
                     j_end=j_end,
-                    j2_equals_j1=j2_equals_j1,
                     drop_S0=drop_S0,
                     isotropic=True,
                     flatten=True,
