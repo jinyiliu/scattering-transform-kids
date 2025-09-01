@@ -522,17 +522,6 @@ class CovStLibrary(_StLibrary):
             return cov
 
 
-    @staticmethod
-    def cov2corr(cov: torch.Tensor) -> torch.Tensor:
-        """Convert a covariance matrix to a correlation matrix with diagonal
-        elements equal to one."""
-        diag = torch.diagonal(cov, dim1=-2, dim2=-1)
-        std_devs = torch.sqrt(diag)
-        denom = std_devs.unsqueeze(-1) * std_devs.unsqueeze(-2)
-        corr = cov / denom
-        return corr
-
-
 class FilterLibrary:
     def __init__(
             self, libdir: os.PathLike | str,

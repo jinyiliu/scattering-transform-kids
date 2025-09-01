@@ -1,3 +1,4 @@
+import torch
 import multiprocessing
 import numpy as np
 from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
@@ -85,6 +86,16 @@ def create_zbin_combos(zbin_indices: list[int], r_max: int=np.inf) -> list[tuple
         zbin_combos.extend(combos)
 
     return zbin_combos
+
+
+def cov2corr(cov: torch.Tensor) -> torch.Tensor:
+    """Convert a covariance matrix to a correlation matrix with diagonal
+    elements equal to one."""
+    diag = torch.diagonal(cov, dim1=-2, dim2=-1)
+    std_devs = torch.sqrt(diag)
+    denom = std_devs.unsqueeze(-1) * std_devs.unsqueeze(-2)
+    corr = cov / denom
+    return corr
 
 
 def mask_apodization(
