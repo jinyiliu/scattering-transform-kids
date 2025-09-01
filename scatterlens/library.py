@@ -317,11 +317,6 @@ class CosmolStLibrary(_StLibrary):
             "Omega_m", "S_8", "h", "w_0"
         ]].values)
 
-        cosmologies = torch.cat([
-            cosmologies[-1:],
-            cosmologies[:-1],
-        ])
-
         for cosmol_ind, cosmol in enumerate(self.sims.cosmol_indices):
             for zpair_ind, (zbin1, zbin2) in enumerate(self.sims.cross_zbins):
                 scoef = self.get_sim_scoef(
