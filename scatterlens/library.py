@@ -244,19 +244,20 @@ class CosmolStLibrary(_StLibrary):
             padding: int=0,
             **St2Dkwargs):
         super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
-        self.fname = "SCOEF_{}_Cosmol{}_ZB{}xZB{}_R{}.pt"
+        self.fname = "SCOEF_{}_Cosmol{}_ZB{}_R{}.pt"
 
 
-    def get_savepath(self, cosmol: int, zbin1: int, zbin2: int, region: int):
+    def get_savepath(self, cosmol: int, zbin_combo: tuple[int], region: int):
         """Return the savepath according to the given region, cosmology, and
         redshift bins."""
         if hasattr(self, "sims"):
             fname = self.fname.format(
                 self.sims.simsname, "fid" if cosmol==-1 else cosmol,
-                zbin1, zbin2, region)
+                "".join(str(zb) for zb in zbin_combo), region)
         else:
-            fname_patt = "*_Cosmol{}_ZB{}xZB{}_R{}.pt".format(
-                "fid" if cosmol==-1 else cosmol, zbin1, zbin2, region)
+            fname_patt = "*_Cosmol{}_ZB{}_R{}.pt".format(
+                "fid" if cosmol==-1 else cosmol,
+                "".join(str(zb) for zb in zbin_combo), region)
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
@@ -264,16 +265,15 @@ class CosmolStLibrary(_StLibrary):
 
 
     def calc_sim_scoef(
-            self, cosmol: int, zbin1: int, zbin2: int, region: int):
+            self, cosmol: int, zbin_combo: tuple[int], region: int):
         return super().calc_sim_scoef(
-            cosmol=cosmol, zbin1=zbin1, zbin2=zbin2, region=region)
+            cosmol=cosmol, zbin_combo=zbin_combo, region=region)
 
 
     def get_sim_scoef(
             self,
             cosmol: int | str,
-            zbin1: int,
-            zbin2: int,
+            zbin_combo: tuple[int],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
             region_weights: ArrayLike | str | None="auto",
@@ -285,22 +285,18 @@ class CosmolStLibrary(_StLibrary):
             flatten: bool=True,
             return_type: str="dict",
     ):
-        """Return the scattering coefficients according to the given region,
-        cosmology, redshift bins, and LOS."""
-        assert zbin2 >= zbin1
-
+        """Return the scattering coefficients according to the given cosmology,
+        zbin combination, averaging over the regions and LOS if given."""
         st_paths = []
         if region:
             if isinstance(region, int):
                 region = [region]
             for _region in region:
-                st_paths.append(self.get_savepath(cosmol, zbin1, zbin2, _region))
-        else:
-            pathname = "*_Cosmol{}_ZB{}xZB{}_*.pt".format(
-                "fid" if cosmol == -1 else cosmol, zbin1, zbin2)
-            st_paths = glob(pathname=pathname, root_dir=self.libdir)
-            if len(st_paths) == 0:
-                raise FileNotFoundError
+                st_paths.append(self.get_savepath(cosmol, zbin_combo, _region))
+        else: # Use all regions
+            pathname = "*_Cosmol{}_ZB{}_*.pt".format(
+                "fid" if cosmol == -1 else cosmol, "".join(str(zb) for zb in zbin_combo))
+            self.glob_in_libdir(fname_patt=pathname)
 
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
@@ -318,13 +314,12 @@ class CosmolStLibrary(_StLibrary):
 
     def get_fid_scoef(
             self,
-            zbin1: int,
-            zbin2: int,
+            zbin_combo: tuple[int],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
     ):
         return self.get_sim_scoef(
-            cosmol="fid", zbin1=zbin1, zbin2=zbin2, region=region, LOS=LOS)
+            cosmol="fid", zbin_combo=zbin_combo, region=region, LOS=LOS)
 
 
     def get_ml_training_set(
@@ -337,6 +332,13 @@ class CosmolStLibrary(_StLibrary):
             decorrelated_S2: bool=True,
             savepath: str | os.PathLike | None=None,
     ) -> dict[str, torch.Tensor] | None:
+        """Return the training set for emulation of scattering coefficients with
+        cosmological parameters as input.
+
+        Returns:
+            A dict with keys "input" and "target", or None if savepath is given
+            and the training set is saved to the given path.
+        """
         assert hasattr(self, "sims")
         assert hasattr(self.sims, "cosmology_info")
 
@@ -345,11 +347,10 @@ class CosmolStLibrary(_StLibrary):
         ]].values)
 
         for cosmol_ind, cosmol in enumerate(self.sims.cosmol_indices):
-            for zpair_ind, (zbin1, zbin2) in enumerate(self.sims.cross_zbins):
+            for zbin_combo_ind, zbin_combo in enumerate(self.sims.zbin_combos):
                 scoef = self.get_sim_scoef(
                     cosmol=cosmol,
-                    zbin1=zbin1,
-                    zbin2=zbin2,
+                    zbin_combo=zbin_combo,
                     region=region,
                     region_weights=region_weights,
                     LOS=None,
@@ -367,7 +368,7 @@ class CosmolStLibrary(_StLibrary):
                             len(self.sims.cross_zbins),
                             len(scoef),
                     ))
-                scoef_tensor[cosmol_ind, zpair_ind, :] = scoef
+                scoef_tensor[cosmol_ind, zbin_combo_ind, :] = scoef
 
         scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
 
