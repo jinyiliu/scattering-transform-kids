@@ -1,4 +1,5 @@
 import os
+import warnings
 import torch
 import numpy as np
 from numpy.typing import ArrayLike
@@ -81,12 +82,19 @@ class _StLibrary:
 
     @abstractmethod
     def get_savepath(self, **kwargs):
+        """The savepath for computed scattering coefficients."""
         raise NotImplementedError("Define this function in the child class.")
 
 
     def calc_sim_scoef(self, **kwargs):
-        """Calculate the scattering coefficients according to the given region,
-        cosmology, and redshift bins."""
+        """Calculate the scattering coefficients for all LOS according to the
+        given zbin combination, region, and cosmology if for cosmology
+        simulation set.
+
+        Args:
+            **kwargs: The keyword arguments for the simulation's
+                `get_sim_massmap` method and `_StLibrary.get_savepath` method.
+        """
         if not hasattr(self, "sims"):
             raise AttributeError
 
@@ -123,9 +131,29 @@ class _StLibrary:
             flatten: bool = True,
             return_type: str = "dict",
     ) -> dict | Sequence:
+        """Return the scattering coefficients according to the given paths,
+        averaging over the regions and LOS if given.
+
+        Args:
+            st_paths:
+            LOS: The LOS indices to include. If None, include all LOS.
+            region_weights: The weights for each region. If "auto", will use the
+                sky areas from the MaskLibrary instance. If None, will use equal
+                weights.
+            j_start:
+            j_end:
+            isotropic: If True, will average over the orientation.
+            drop_S0: If True, will drop S0 from the returned result.
+            decorrelated_S2:
+            flatten: If True, will flatten the returned result.
+            return_type: "dict" or "sequence". If "dict", will return a dict
+                with keys "S0", "S1", and "S2". If "sequence", will return a
+                single sequence with S0, S1, and S2 concatenated.
+        """
         assert return_type in ("dict", "sequence")
         if return_type == "sequence" and not flatten:
             flatten = True
+            warnings.warn("Changing flatten to True. Only support return_type='sequence' when flatten=True.")
 
         if region_weights:
             if region_weights == "auto":
@@ -194,17 +222,16 @@ class _StLibrary:
                 return torch.hstack((S0, S1, S2))
 
 
-    def glob_in_libdir(self, fname_patt: str):
+    def glob_in_libdir(self, fname_patt: str) -> str | list[str]:
         """Find the filename according to the given filename pattern."""
         matched = glob(pathname=fname_patt, root_dir=self.libdir)
         if not matched:
             raise FileNotFoundError
         else:
-            fname = matched[0]
-        return fname
-
-
-
+            if len(matched) > 1:
+                return matched
+            else:
+                return matched[0]
 
 
 class CosmolStLibrary(_StLibrary):
