@@ -93,7 +93,7 @@ class CosmoSLICS(KiDS1000):
     simspath_fid = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
     # cosmol_indices has to be in sync with _cosmologies
-    cosmol_indices = list(range(25)).append(-1)
+    cosmol_indices = list(range(25)) + [-1]
     LOS_indices = list(range(1, 51))
     param_ranges = {
         "Omega_m": [0.1, 0.55],
