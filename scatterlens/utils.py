@@ -31,17 +31,17 @@ def run_mp_scattering(
     args_list = []
     if cosmolstlib:
         cosmo_args_list = [
-            (cosmolstlib, cosmol, zbin1, zbin2, region)
+            (cosmolstlib, cosmol, zbin_combo, region)
             for cosmol in cosmolstlib.sims.cosmol_indices
-            for (zbin1, zbin2) in cosmolstlib.sims.cross_zbins
+            for zbin_combo in cosmolstlib.sims.zbin_combos
             for region in cosmolstlib.sims.region_indices
         ]
         args_list += cosmo_args_list
 
     if covstlib:
         cov_args_list = [
-            (covstlib, zbin1, zbin2, region)
-            for (zbin1, zbin2) in covstlib.sims.cross_zbins
+            (covstlib, zbin_combo, region)
+            for zbin_combo in covstlib.sims.zbin_combos
             for region in covstlib.sims.region_indices
         ]
         args_list += cov_args_list
