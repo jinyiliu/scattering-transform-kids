@@ -253,11 +253,11 @@ class CosmolStLibrary(_StLibrary):
         if hasattr(self, "sims"):
             fname = self.fname.format(
                 self.sims.simsname, "fid" if cosmol==-1 else cosmol,
-                "".join(str(zb) for zb in zbin_combo), region)
+                "u".join(str(zb) for zb in zbin_combo), region)
         else:
             fname_patt = "*_Cosmol{}_ZB{}_R{}.pt".format(
                 "fid" if cosmol==-1 else cosmol,
-                "".join(str(zb) for zb in zbin_combo), region)
+                "u".join(str(zb) for zb in zbin_combo), region)
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
@@ -295,7 +295,7 @@ class CosmolStLibrary(_StLibrary):
                 st_paths.append(self.get_savepath(cosmol, zbin_combo, _region))
         else: # Use all regions
             pathname = "*_Cosmol{}_ZB{}_*.pt".format(
-                "fid" if cosmol == -1 else cosmol, "".join(str(zb) for zb in zbin_combo))
+                "fid" if cosmol == -1 else cosmol, "u".join(str(zb) for zb in zbin_combo))
             self.glob_in_libdir(fname_patt=pathname)
 
         return super()._get_sim_scoef_from_paths(
@@ -401,10 +401,10 @@ class CovStLibrary(_StLibrary):
         """Return the savepath according to the given region and zbin combination."""
         if hasattr(self, "sims"):
             fname = self.fname.format(
-                self.sims.simsname, "".join(str(zb) for zb in zbin_combo), region)
+                self.sims.simsname, "u".join(str(zb) for zb in zbin_combo), region)
         else:
             fname_patt = "*_ZB{}_R{}.pt".format(
-                "".join(str(zb) for zb in zbin_combo), region)
+                "u".join(str(zb) for zb in zbin_combo), region)
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
@@ -438,7 +438,7 @@ class CovStLibrary(_StLibrary):
             for _region in region:
                 st_paths.append(self.get_savepath(zbin_combo, _region))
         else:
-            pathname = "*_ZB{}_*.pt".format("".join(str(zb) for zb in zbin_combo))
+            pathname = "*_ZB{}_*.pt".format("u".join(str(zb) for zb in zbin_combo))
             st_paths = glob(pathname=pathname, root_dir=self.libdir)
 
         return super()._get_sim_scoef_from_paths(
