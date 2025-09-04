@@ -57,11 +57,11 @@ class KiDS1000:
         return 1 <= region <= 18
 
     @staticmethod
-    def has_zbin_combo(zbin_combo: tuple[int]) -> bool:
+    def has_zbin_combo(zbin_combo: tuple[int, ...]) -> bool:
         return zbin_combo in KiDS1000.zbin_combos
 
     @staticmethod
-    def get_shapenoise(zbin_combo: tuple[int]) -> float:
+    def get_shapenoise(zbin_combo: tuple[int, ...]) -> float:
         """Get the shape noise value for a given zbin combination. This function
         is only used when loading the simulation mass maps. For cross-zbin, the
         noise value is taken from the first zbin.
@@ -75,7 +75,7 @@ class KiDS1000:
                 raise ValueError("zbin_combo must have length 1, 2, or 5.")
 
     @staticmethod
-    def get_ZBcut(zbin_combo: tuple[int]) -> str:
+    def get_ZBcut(zbin_combo: tuple[int, ...]) -> str:
         """Get the ZBcut string for a given zbin combination. This function is
         only used when loading the simulation mass maps."""
         match len(zbin_combo):
@@ -105,7 +105,7 @@ class CosmoSLICS(KiDS1000):
     @staticmethod
     def get_sim_massmap(
             cosmol: int,
-            zbin_combo: tuple[int],
+            zbin_combo: tuple[int, ...],
             region: int,
             LOS: int,
     ) -> NDArray:
@@ -134,7 +134,7 @@ class CosmoSLICS(KiDS1000):
 
     @staticmethod
     def get_fid_massmap(
-            zbin_combo: tuple[int],
+            zbin_combo: tuple[int, ...],
             region: int,
             LOS: int,
     ) -> NDArray:
@@ -178,7 +178,7 @@ class SLICS(KiDS1000):
     LOS_indices.pop(198 - 74)
 
     @staticmethod
-    def get_sim_massmap(zbin_combo: tuple[int], region: int, LOS: int) -> NDArray:
+    def get_sim_massmap(zbin_combo: tuple[int, ...], region: int, LOS: int) -> NDArray:
         assert (
             KiDS1000.has_region(region)
             and KiDS1000.has_zbin_combo(zbin_combo)

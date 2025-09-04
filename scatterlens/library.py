@@ -247,7 +247,7 @@ class CosmolStLibrary(_StLibrary):
         self.fname = "SCOEF_{}_Cosmol{}_ZB{}_R{}.pt"
 
 
-    def get_savepath(self, cosmol: int, zbin_combo: tuple[int], region: int):
+    def get_savepath(self, cosmol: int, zbin_combo: tuple[int, ...], region: int):
         """Return the savepath according to the given region, cosmology, and
         zbin combination."""
         if hasattr(self, "sims"):
@@ -265,7 +265,7 @@ class CosmolStLibrary(_StLibrary):
 
 
     def calc_sim_scoef(
-            self, cosmol: int, zbin_combo: tuple[int], region: int):
+            self, cosmol: int, zbin_combo: tuple[int, ...], region: int):
         return super().calc_sim_scoef(
             cosmol=cosmol, zbin_combo=zbin_combo, region=region)
 
@@ -273,7 +273,7 @@ class CosmolStLibrary(_StLibrary):
     def get_sim_scoef(
             self,
             cosmol: int | str,
-            zbin_combo: tuple[int],
+            zbin_combo: tuple[int, ...],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
             region_weights: ArrayLike | str | None="auto",
@@ -314,7 +314,7 @@ class CosmolStLibrary(_StLibrary):
 
     def get_fid_scoef(
             self,
-            zbin_combo: tuple[int],
+            zbin_combo: tuple[int, ...],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
     ):
@@ -397,7 +397,7 @@ class CovStLibrary(_StLibrary):
         self.fname = "SCOEF_{}_ZB{}_R{}.pt"
 
 
-    def get_savepath(self, zbin_combo: tuple[int], region: int):
+    def get_savepath(self, zbin_combo: tuple[int, ...], region: int):
         """Return the savepath according to the given region and zbin combination."""
         if hasattr(self, "sims"):
             fname = self.fname.format(
@@ -411,13 +411,13 @@ class CovStLibrary(_StLibrary):
         return savepath
 
 
-    def calc_sim_scoef(self, zbin_combo: tuple[int], region: int):
+    def calc_sim_scoef(self, zbin_combo: tuple[int, ...], region: int):
         return super().calc_sim_scoef(zbin_combo=zbin_combo, region=region)
 
 
     def get_sim_scoef(
             self,
-            zbin_combo: tuple[int],
+            zbin_combo: tuple[int, ...],
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
             region_weights: ArrayLike | str | None="auto",
