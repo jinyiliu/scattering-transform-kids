@@ -296,7 +296,7 @@ class CosmolStLibrary(_StLibrary):
         else: # Use all regions
             pathname = "*_Cosmol{}_ZB{}_*.pt".format(
                 "fid" if cosmol == -1 else cosmol, "u".join(str(zb) for zb in zbin_combo))
-            self.glob_in_libdir(fname_patt=pathname)
+            st_paths += self.glob_in_libdir(fname_patt=pathname)
 
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
@@ -437,9 +437,9 @@ class CovStLibrary(_StLibrary):
                 region = [region]
             for _region in region:
                 st_paths.append(self.get_savepath(zbin_combo, _region))
-        else:
+        else: # Use all regions
             pathname = "*_ZB{}_*.pt".format("u".join(str(zb) for zb in zbin_combo))
-            st_paths = glob(pathname=pathname, root_dir=self.libdir)
+            st_paths += self.glob_in_libdir(fname_patt=pathname)
 
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
