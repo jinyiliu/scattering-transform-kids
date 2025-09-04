@@ -454,6 +454,48 @@ class CovStLibrary(_StLibrary):
             return_type=return_type,
         )
 
+    def collect_flattened_scoef(
+            self,
+            zbin_combos: list[tuple[int, ...]],
+            region: int | Sequence[int] | None=None,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+    ):
+        """Collect the flattened scattering coefficients for the given zbin
+        combinations, averaging over the regions if given.
+
+        Returns:
+            A torch.Tensor object of shape:
+                (n_LOS, n_zbin_combo * n_scoef_per_zbin_combo).
+        """
+        for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
+            for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
+                scoef = self.get_sim_scoef(
+                    zbin_combo=zbin_combo,
+                    region=region,
+                    region_weights="auto",
+                    LOS=LOS,
+                    j_start=j_start,
+                    j_end=j_end,
+                    drop_S0=drop_S0,
+                    isotropic=True,
+                    flatten=True,
+                    return_type="sequence",
+                    decorrelated_S2=decorrelated_S2,
+                )
+                if "scoef_tensor" not in locals():
+                    scoef_tensor = torch.zeros(size=(
+                            len(self.sims.LOS_indices),
+                            len(zbin_combos),
+                            len(scoef),
+                    ))
+                scoef_tensor[LOS_ind, zbin_combo_ind, :] = scoef
+
+        return scoef_tensor.flatten(start_dim=1, end_dim=2)
+
+
     def get_cov(
             self,
             zbin_combos: list[tuple[int]]=None,
@@ -478,31 +520,15 @@ class CovStLibrary(_StLibrary):
         """
         assert hasattr(self, "sims")
 
-        for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
-            for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
-                scoef = self.get_sim_scoef(
-                    zbin_combo=zbin_combo,
-                    region=region,
-                    region_weights="auto",
-                    LOS=LOS,
-                    j_start=j_start,
-                    j_end=j_end,
-                    drop_S0=drop_S0,
-                    isotropic=True,
-                    flatten=True,
-                    return_type="sequence",
-                    decorrelated_S2=decorrelated_S2,
-                )
-                if "scoef_tensor" not in locals():
-                    scoef_tensor = torch.zeros(size=(
-                            len(zbin_combos),
-                            len(scoef),
-                            len(self.sims.LOS_indices),
-                    ))
-                scoef_tensor[zbin_combo_ind, :, LOS_ind] = scoef
-
-        scoef_tensor = scoef_tensor.flatten(start_dim=0, end_dim=1)
-        cov = torch.cov(scoef_tensor)
+        scoef_tensor = self.collect_flattened_scoef(
+            zbin_combos=zbin_combos if zbin_combos else self.sims.zbin_combos,
+            region=region,
+            j_start=j_start,
+            j_end=j_end,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+        )
+        cov = torch.cov(scoef_tensor.t())
 
         if return_mean_dv:
             scoef_tensor = scoef_tensor.mean(dim=1, keepdim=False)
