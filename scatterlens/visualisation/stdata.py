@@ -7,7 +7,7 @@ def plot_St_coefs_cov_training(
         zbin_combos: list[tuple[int, ...]],
         n_cols: int=4,
         J: int | None=None,
-        ylabel: str=r"$S_{1/2}$",
+        ylabel: str=r"$s_{1/2}$",
         color: str="石涅",
 ):
     """Plot scattering coefficients from covariance training data."""
