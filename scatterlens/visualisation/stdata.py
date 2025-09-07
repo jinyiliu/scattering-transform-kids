@@ -43,7 +43,7 @@ def plot_Cov(
         ax.text(x=x, y=cov.shape[1] * 1.05, s=s, ha="center", va="top")
 
 
-def plot_St_coefs_cov_training(
+def plot_St_coefs(
         st_coefs: torch.Tensor,
         zbin_combos: list[tuple[int, ...]],
         n_cols: int=4,
@@ -68,7 +68,5 @@ def plot_St_coefs_cov_training(
                 lw=0.5,
                 alpha=0.05,
             )
-    fig.text(
-        x=0.02, y=0.5, s=ylabel,
-        va="center", rotation="vertical",
-    )
+
+    return fig, axs

@@ -16,6 +16,7 @@ def create_zbin_combo_subplots(
         zbin_combos: list[tuple[int, ...]],
         n_cols: int=4,
         J: int=None,
+        ylabel: str=r"$s_{1/2}$",
 ):
     """Create subplots for each zbin combination.
 
@@ -25,6 +26,7 @@ def create_zbin_combo_subplots(
         n_cols: Number of columns in the subplot grid.
         J: Position to separate first- and second-order scattering coefficients.
             If None, no separation line is drawn.
+        ylabel: Label for the y-axis.
 
     Returns:
         fig: The figure object.
@@ -65,6 +67,11 @@ def create_zbin_combo_subplots(
                                  x=0.13, loc="left", color="grey", fontsize=8)
         else:
             ax.axis("off")
+
+    fig.text(
+        x=0.02, y=0.5, s=ylabel,
+        va="center", rotation="vertical",
+    )
 
     return fig, axs[:n_combo], dv_length_per_combo
 
