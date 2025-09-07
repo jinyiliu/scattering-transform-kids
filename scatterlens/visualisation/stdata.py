@@ -56,7 +56,12 @@ def plot_St_coefs(
         st_coefs = st_coefs.unsqueeze(0)
 
     fig, axs, dv_length_per_combo = create_zbin_combo_subplots(
-        dv_length=st_coefs.shape[1], zbin_combos=zbin_combos, n_cols=n_cols, J=J)
+        dv_length=st_coefs.shape[1],
+        zbin_combos=zbin_combos,
+        n_cols=n_cols,
+        ylabel=ylabel,
+        J=J,
+    )
 
     for i, ax in enumerate(axs):
         for st_coef in st_coefs:
