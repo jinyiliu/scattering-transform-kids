@@ -75,3 +75,47 @@ def plot_St_coefs(
             )
 
     return fig, axs
+
+
+def plot_St_coefs_vs_param(
+        st_coefs: torch.Tensor,
+        param_values: torch.Tensor,
+        zbin_combos: list[tuple[int, ...]],
+        st_coef_fid: torch.Tensor | None=None,
+        param_range: tuple[float, float] | None=None,
+        n_cols: int=4,
+        J: int | None=None,
+        ylabel: str=r"$s_{1/2}$",
+        cmap: str="cividis",
+):
+    """Plot scattering coefficients from covariance training data."""
+    if st_coefs.ndim == 1:
+        st_coefs = st_coefs.unsqueeze(0)
+
+    if st_coef_fid is not None:
+        st_coefs /= st_coef_fid.clone()
+
+    if param_range is None:
+        param_range = (param_values.min().item(), param_values.max().item())
+
+    sm, colormap = get_colormap(cmap, param_range)
+
+    fig, axs, dv_length_per_combo = create_zbin_combo_subplots(
+        dv_length=st_coefs.shape[1],
+        zbin_combos=zbin_combos,
+        n_cols=n_cols,
+        ylabel=ylabel,
+        J=J,
+    )
+
+    for i, ax in enumerate(axs):
+        for st_coef, param_value in zip(st_coefs, param_values):
+            ax.plot(
+                st_coef[dv_length_per_combo * i: dv_length_per_combo * (i + 1)],
+                color=colormap(param_value),
+                zorder=0,
+                linewidth=1.0,
+                alpha=0.5,
+            )
+
+    return fig, axs
