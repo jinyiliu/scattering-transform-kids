@@ -365,7 +365,7 @@ class CosmolStLibrary(_StLibrary):
                 if "scoef_tensor" not in locals():
                     scoef_tensor = torch.zeros(size=(
                             len(self.sims.cosmol_indices),
-                            len(self.sims.cross_zbins),
+                            len(self.sims.zbin_combos),
                             len(scoef),
                     ))
                 scoef_tensor[cosmol_ind, zbin_combo_ind, :] = scoef
