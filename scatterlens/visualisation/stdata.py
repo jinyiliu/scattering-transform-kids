@@ -59,9 +59,9 @@ def plot_St_coefs_cov_training(
         dv_length=st_coefs.shape[1], zbin_combos=zbin_combos, n_cols=n_cols, J=J)
 
     for i, ax in enumerate(axs):
-        for stcoef in st_coefs:
+        for st_coef in st_coefs:
             ax.plot(
-                stcoef[dv_length_per_combo * i: dv_length_per_combo * (i + 1)],
+                st_coef[dv_length_per_combo * i: dv_length_per_combo * (i + 1)],
                 color=color,
                 linestyle="solid",
                 zorder=0,
