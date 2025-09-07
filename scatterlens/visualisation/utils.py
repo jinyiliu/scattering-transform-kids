@@ -1,6 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Callable
 import cmplstyle
 from cmplstyle import onecol_wth, median_wth, fullpg_wth, cm2inch
 cmplstyle.use_builtin_mplstyle()
@@ -66,3 +67,18 @@ def create_zbin_combo_subplots(
             ax.axis("off")
 
     return fig, axs[:n_combo], dv_length_per_combo
+
+
+def get_colormap(
+        cmap: str,
+        param_range: tuple[float, float],
+) -> [plt.cm.ScalarMappable, Callable]:
+    colormap_ = mpl.colormaps[cmap]
+    norm = mpl.colors.Normalize(vmin=param_range[0], vmax=param_range[1])
+    sm = plt.cm.ScalarMappable(cmap=colormap_, norm=norm)
+    sm.set_array([])
+
+    def colormap(param_value: float):
+        return colormap_(norm(param_value))
+
+    return sm, colormap
