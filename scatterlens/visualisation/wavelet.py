@@ -8,7 +8,15 @@ def plot_Morlet_profile(
         sigma_Gaussian: float | None=None,
         colors: list[str] | None=None,
 ):
+    """Plot the Morlet wavelet profiles in Fourier space.
 
+    Args:
+        js: List of j scales to plot.
+        pixel_length: Length of a pixel in arcmin.
+        freq_samples: Frequency samples in units of pixel^-1.
+        sigma_Gaussian: Standard deviation of the Gaussian to compare with.
+        colors: Colors for different j scales.
+    """
     fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
 
     for j_index, j in enumerate(js):
