@@ -7,6 +7,8 @@ def plot_Morlet_profile(
         freq_samples: np.ndarray,
         sigma_Gaussian: float | None=None,
         colors: list[str] | None=None,
+        base_value_k0=3. / 4. * np.pi,
+        base_value_sigma=0.8,
 ):
     """Plot the Morlet wavelet profiles in Fourier space.
 
@@ -16,13 +18,15 @@ def plot_Morlet_profile(
         freq_samples: Frequency samples in units of pixel^-1.
         sigma_Gaussian: Standard deviation of the Gaussian to compare with.
         colors: Colors for different j scales.
+        base_value_k0: Base value for Morlet2D.k0(j).
+        base_value_sigma: Base value for Morlet2D.sigma(j).
     """
     fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
 
     for j_index, j in enumerate(js):
         ax.plot(
             freq_samples,
-            Morlet2D.get_profile(j, freq_samples),
+            Morlet2D.get_profile(j, freq_samples, base_value_k0, base_value_sigma),
             label=f"$j=$ {j}",
             color=colors[j_index] if colors else None,
             linewidth=0.5 if j==1 else 2.0,
@@ -55,3 +59,35 @@ def plot_Morlet_profile(
     second_ax.tick_params(axis="x", pad=1.)
 
     return fig, ax
+
+
+def plot_Morlet_wavelets():
+    # Show the wavelet j=2,3,4
+    fig, axs = plt.subplots(
+        nrows=3, ncols=L,
+        sharex=True,
+        sharey=True,
+        figsize=cm2inch(median_wth, 10),
+    )
+
+    for wvlet in filters:
+        j, l = wvlet["j"], wvlet["l"]
+        if j == 0 or j == 1:
+            continue
+        f = wvlet["levels"][0]
+        filter_c = np.fft.fftshift(fft2(f))
+        filter_r = filter_c.real
+        filter_i = filter_c.imag
+
+        ax = axs[j - 2, l]
+        ax.imshow(
+            filter_r,
+            cmap="RdBu_r",
+            vmin=-filter_r.max(),
+            vmax=filter_r.max(),
+        )
+        ax.axis("off")
+        ax.set_title(r"$j={}$, $l={}$".format(j, l))
+
+    fig.show()
+    pass
