@@ -92,8 +92,21 @@ class Morlet2D(Wavelet2D):
 
         return filters
 
-    def get_profile(self):
-        pass
+    @staticmethod
+    def get_profile(j: int, freq_samples: np.ndarray) -> np.ndarray:
+        """Get the Morlet profile in Fourier space.
+
+        Args:
+            j:
+            freq_samples: Frequency samples in units of pixel^-1.
+        """
+        k_samples = freq_samples * 2 * np.pi
+        sigma = Morlet2D.sigma(j)
+        k0 = Morlet2D.k0(j)
+        beta = np.exp(- (k0 * sigma) ** 2 / 2)
+        low_pass_window = beta * np.exp(- (k_samples * sigma) ** 2)
+        profile = np.exp(- ((k_samples - k0) * sigma) ** 2 / 2) - low_pass_window
+        return profile
 
     @staticmethod
     def sigma(j):
@@ -113,5 +126,53 @@ class Morlet2D(Wavelet2D):
         return pixel_length / Morlet2D.k0(j) * 2
 
 
-def get_Gaussian_profile():
-    pass
+def get_Gaussian_profile(
+        sigma: float,
+        pixel_length: float,
+        freq_samples: np.ndarray,
+) -> np.ndarray:
+    """Get the Gaussian profile in Fourier space.
+
+    Args:
+        sigma: Standard deviation of the Gaussian.
+        pixel_length: Length of a pixel in the same unit as `sigma`.
+        freq_samples: Frequency samples in units of pixel^-1.
+    """
+    sigma_in_pixel = sigma / pixel_length
+    k_samples = freq_samples * 2 * np.pi
+    return np.exp(- (k_samples * sigma_in_pixel)**2 / 2)
+
+
+def get_freq_multipole_conversion_pair(pixel_length: float):
+    """Get the conversion pair between multipole and frequency.
+
+    Args:
+        pixel_length: Length of a pixel in arcmin.
+    """
+    def multiple2freq_closure(multiple: float | np.ndarray) -> float | np.ndarray:
+        return multiple2freq(multiple, pixel_length)
+
+    def freq2multiple_closure(freq: float | np.ndarray) -> float | np.ndarray:
+        return freq2multiple(freq, pixel_length)
+
+    return freq2multiple_closure, multiple2freq_closure
+
+
+def freq2multiple(freq: float | np.ndarray, pixel_length: float) -> float | np.ndarray:
+    """Convert frequency to multiple.
+
+    Args:
+        freq: Frequency samples in units of pixel^-1.
+        pixel_length: Length of a pixel in arcmin.
+    """
+    return freq * (2 * 60 * 180) / pixel_length
+
+
+def multiple2freq(multiple: float | np.ndarray, pixel_length: float) -> float | np.ndarray:
+    """Convert multiple to frequency.
+
+    Args:
+        multiple:
+        pixel_length: Length of a pixel in arcmin.
+    """
+    return multiple * pixel_length / (2 * 60 * 180)
