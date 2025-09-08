@@ -61,33 +61,41 @@ def plot_Morlet_profile(
     return fig, ax
 
 
-def plot_Morlet_wavelets():
-    # Show the wavelet j=2,3,4
+def plot_Morlet_wavelets(wavelets: torch.Tensor):
+    """Plot the 2D Morlet wavelets in real space.
+
+    Args:
+        wavelets: Wavelets in Fourier space with shape (J, L, M, N). This can be
+            generated using `Morlet2D.gen_filter_bank()` function and choose the
+            key "psi" from the returned dictionary.
+    """
+    from numpy.fft import ifft2
+
+    J, L, M, N = wavelets.shape
+
     fig, axs = plt.subplots(
-        nrows=3, ncols=L,
-        sharex=True,
-        sharey=True,
-        figsize=cm2inch(median_wth, 10),
+        nrows=J - 1, ncols=L,
+        figsize=cm2inch(median_wth, median_wth)
     )
+    fig.set_figwidth(cm2inch(median_wth))
 
-    for wvlet in filters:
-        j, l = wvlet["j"], wvlet["l"]
-        if j == 0 or j == 1:
+    for j in range(J):
+        if j == 0:
             continue
-        f = wvlet["levels"][0]
-        filter_c = np.fft.fftshift(fft2(f))
-        filter_r = filter_c.real
-        filter_i = filter_c.imag
+        for l in range(L):
+            f = wavelets[j, l]  # wavelet in Fourier space
+            filter_c = np.fft.fftshift(ifft2(f))
+            filter_r = filter_c.real
+            filter_i = filter_c.imag
 
-        ax = axs[j - 2, l]
-        ax.imshow(
-            filter_r,
-            cmap="RdBu_r",
-            vmin=-filter_r.max(),
-            vmax=filter_r.max(),
-        )
-        ax.axis("off")
-        ax.set_title(r"$j={}$, $l={}$".format(j, l))
+            ax = axs[j - 1, l]
+            ax.imshow(
+                filter_r,
+                cmap="RdBu_r",
+                vmin=-filter_r.max(),
+                vmax=filter_r.max(),
+            )
+            ax.axis("off")
+            ax.set_title(r"$j={}$, $l={}$".format(j, l), fontsize=7)
 
-    fig.show()
-    pass
+    return fig, axs
