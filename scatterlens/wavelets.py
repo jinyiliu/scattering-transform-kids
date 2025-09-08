@@ -116,7 +116,7 @@ class Morlet2D(Wavelet2D):
 
     @staticmethod
     def k0(j):
-        """Central frequency of the Morlet wavelet with unit per pixel."""
+        """Central frequency of the Morlet wavelet in unit of pixel^-1."""
         base_value: float = 3. / 4. * np.pi
         return base_value / Wavelet2D.dilation(j)
 
