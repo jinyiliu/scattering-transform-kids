@@ -1,5 +1,3 @@
-import torch
-import matplotlib.pyplot as plt
 from scatterlens.visualisation.utils import *
 
 def plot_Cov(
