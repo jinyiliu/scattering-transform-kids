@@ -4,6 +4,8 @@ def plot_Cov(
         cov: torch.Tensor,
         zbin_combos: list[tuple[int,...]],
         cmap="cividis",
+        savedir: str | None=None,
+        fname: str="cov.pdf",
         return_fig_ax: bool=False,
 ):
     """Plot normalised covariance matrix."""
@@ -41,6 +43,12 @@ def plot_Cov(
     ):
         ax.text(x=x, y=cov.shape[1] * 1.05, s=s, ha="center", va="top")
 
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
     if return_fig_ax:
         return fig, ax
 
@@ -52,6 +60,8 @@ def plot_St_coefs(
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
         color: str="石涅",
+        savedir: str | None=None,
+        fname: str="st_coefs.pdf",
         return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from covariance training data."""
@@ -77,6 +87,12 @@ def plot_St_coefs(
                 alpha=0.05,
             )
 
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
     if return_fig_ax:
         return fig, axs
 
@@ -91,6 +107,8 @@ def plot_St_coefs_vs_param(
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
         cmap: str="cividis",
+        savedir: str | None=None,
+        fname: str="st_coefs_vs_param.pdf",
         return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from covariance training data."""
@@ -122,6 +140,12 @@ def plot_St_coefs_vs_param(
                 linewidth=1.0,
                 alpha=0.5,
             )
+
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
 
     if return_fig_ax:
         return fig, axs

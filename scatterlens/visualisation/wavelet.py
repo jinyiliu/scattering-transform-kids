@@ -10,6 +10,8 @@ def plot_Morlet_profile(
         Q: float=3. / 5. * np.pi,
         sigma_0: float=0.8,
         dilation_factor: float=2.0,
+        savedir: str | None=None,
+        fname: str="Morlet_profile.pdf",
         return_fig_ax: bool=False,
 ):
     """Plot the Morlet wavelet profiles in Fourier space.
@@ -23,6 +25,8 @@ def plot_Morlet_profile(
         Q: Quality factor for the Morlet wavelet.
         sigma_0: Base standard deviation for the Morlet wavelet.
         dilation_factor: Dilation factor for the wavelet.
+        savedir: Directory to save the figure.
+        fname: Filename to save the figure.
         return_fig_ax: Whether to return the figure and axis objects.
     """
     fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
@@ -68,11 +72,20 @@ def plot_Morlet_profile(
     second_ax.minorticks_on()
     second_ax.tick_params(axis="x", pad=1.)
 
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
     if return_fig_ax:
         return fig, ax
 
 
-def plot_Morlet_wavelets(wavelets: torch.Tensor, return_fig_ax: bool=False):
+def plot_Morlet_wavelets(
+        wavelets: torch.Tensor,
+        return_fig_ax: bool=False,
+):
     """Plot the 2D Morlet wavelets in real space.
 
     Args:
@@ -112,3 +125,12 @@ def plot_Morlet_wavelets(wavelets: torch.Tensor, return_fig_ax: bool=False):
 
     if return_fig_ax:
         return fig, axs
+
+
+def plot_Morlet_wavelets_Fourier_overlap():
+    """Plot the overlap of 2D Morlet wavelets in Fourier space.
+
+    Reference:
+        Gauthier et al. (2022) Parametric Scattering Networks Figure 2
+    """
+    pass
