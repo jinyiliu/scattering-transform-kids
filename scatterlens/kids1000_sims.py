@@ -8,6 +8,8 @@ from scatterlens.utils import create_zbin_combos
 _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
 
 class KiDS1000:
+    smoothing_scale = 6.6
+    smoothing_scale_unit = "arcmin"
     resol = 2.344
     resol_unit = "arcmin"
     region_indices = list(range(1, 19))
