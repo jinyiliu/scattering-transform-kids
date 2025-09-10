@@ -7,8 +7,9 @@ def plot_Morlet_profile(
         freq_samples: np.ndarray,
         sigma_Gaussian: float | None=None,
         colors: list[str] | None=None,
-        base_value_k0=3. / 4. * np.pi,
-        base_value_sigma=0.8,
+        Q: float=3. / 5. * np.pi,
+        sigma_0: float=0.8,
+        dilation_factor: float=2.0,
 ):
     """Plot the Morlet wavelet profiles in Fourier space.
 
@@ -18,15 +19,22 @@ def plot_Morlet_profile(
         freq_samples: Frequency samples in units of pixel^-1.
         sigma_Gaussian: Standard deviation of the Gaussian to compare with.
         colors: Colors for different j scales.
-        base_value_k0: Base value for Morlet2D.k0(j).
-        base_value_sigma: Base value for Morlet2D.sigma(j).
+        Q: Quality factor for the Morlet wavelet.
+        sigma_0: Base standard deviation for the Morlet wavelet.
+        dilation_factor: Dilation factor for the wavelet.
     """
     fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
 
     for j_index, j in enumerate(js):
         ax.plot(
             freq_samples,
-            Morlet2D.get_profile(j, freq_samples, base_value_k0, base_value_sigma),
+            Morlet2D.get_profile(
+                j=j,
+                freq_samples=freq_samples,
+                Q=Q,
+                sigma_0=sigma_0,
+                dilation_factor=dilation_factor,
+            ),
             label=f"$j=$ {j}",
             color=colors[j_index] if colors else None,
             linewidth=0.5 if j==1 else 2.0,

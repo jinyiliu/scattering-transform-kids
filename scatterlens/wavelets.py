@@ -29,13 +29,25 @@ class Wavelet2D(object):
 class Morlet2D(Wavelet2D):
     def __init__(
             self, M: int, N: int, J: int, L: int,
-            base_value_k0=3. / 4. * np.pi,
-            base_value_sigma=0.8,
+            Q=3. / 5. * np.pi,
+            sigma_0=0.8,
             dilation_factor: float=2.0,
     ):
+        """Morlet wavelet in 2D.
+
+        Args:
+            M:
+            N:
+            J:
+            L:
+            Q: Quality factor, defined as xi * sigma.
+            sigma_0: Standard deviation of the Gaussian envelope at j=0 in units of pixel.
+            dilation_factor: Dilation factor for the wavelet.
+        """
         super().__init__(M=M, N=N, J=J, L=L, dilation_factor=dilation_factor)
-        self.base_value_k0 = base_value_k0
-        self.base_value_sigma = base_value_sigma
+        self.Q = Q
+        self.xi_0 = Q / sigma_0
+        self.sigma_0 = sigma_0
 
     def morlet_2d(self, j: int, l: int) -> NDArray[np.complex64]:
         """Return the 2D profile of the Morlet wavelet in real space."""
@@ -44,12 +56,12 @@ class Morlet2D(Wavelet2D):
             N=self.N,
             sigma=self.sigma(
                 j,
-                base_value=self.base_value_sigma,
+                sigma_0=self.sigma_0,
                 dilation_factor=self.dialation_factor,
             ),
-            xi=self.k0(
+            xi=self.xi(
                 j,
-                base_value=self.base_value_k0,
+                xi_0=self.Q / self.sigma_0,
                 dilation_factor=self.dialation_factor,
             ),
             theta=(int(self.L - self.L / 2 - 1) - l) / self.L * np.pi,
@@ -64,7 +76,7 @@ class Morlet2D(Wavelet2D):
             N=self.N,
             sigma=self.sigma(
                 self.J - 1,
-                base_value=self.base_value_sigma,
+                sigma_0=self.sigma_0,
                 dilation_factor=self.dialation_factor,
             ),
             xi=0.,
@@ -114,8 +126,8 @@ class Morlet2D(Wavelet2D):
     def get_profile(
             j: int,
             freq_samples: np.ndarray,
-            base_value_k0=3. / 4. * np.pi,
-            base_value_sigma=0.8,
+            Q=3. / 5. * np.pi,
+            sigma_0=0.8,
             dilation_factor: float=2.0,
     ) -> np.ndarray:
         """Get the Morlet profile in Fourier space.
@@ -123,35 +135,48 @@ class Morlet2D(Wavelet2D):
         Args:
             j:
             freq_samples: Frequency samples in units of pixel^-1.
-            base_value_k0: Base value for Morlet2D.k0(j).
-            base_value_sigma: Base value for Morlet2D.sigma(j).
+            Q: Quality factor, defined as xi * sigma.
+            sigma_0: Base value for Morlet2D.sigma(j).
             dilation_factor: Dilation factor for the wavelet.
         """
-        k_samples = freq_samples * 2 * np.pi
-        sigma = Morlet2D.sigma(j, base_value=base_value_sigma, dilation_factor=dilation_factor)
-        k0 = Morlet2D.k0(j, base_value=base_value_k0, dilation_factor=dilation_factor)
-        beta = np.exp(- (k0 * sigma) ** 2 / 2)
-        low_pass_window = beta * np.exp(- (k_samples * sigma) ** 2)
-        profile = np.exp(- ((k_samples - k0) * sigma) ** 2 / 2) - low_pass_window
+        xi_samples = freq_samples * 2 * np.pi
+        sigma = Morlet2D.sigma(
+            j,
+            sigma_0=sigma_0,
+            dilation_factor=dilation_factor,
+        )
+        xi = Morlet2D.xi(
+            j,
+            xi_0=Q / sigma_0,
+            dilation_factor=dilation_factor,
+        )
+        beta = np.exp(- (xi * sigma) ** 2 / 2)
+        low_pass_window = beta * np.exp(- (xi_samples * sigma) ** 2)
+        profile = np.exp(- ((xi_samples - xi) * sigma) ** 2 / 2) - low_pass_window
         return profile
 
     @staticmethod
-    def sigma(j, base_value=0.8, dilation_factor: float=2.0):
+    def sigma(j, sigma_0=0.8, dilation_factor: float=2.0):
         """Sigma of the Gaussian envelope in pixels."""
-        return base_value * Wavelet2D.dilation(j, dilation_factor)
+        return sigma_0 * Wavelet2D.dilation(j, dilation_factor)
 
     @staticmethod
-    def k0(j, base_value=3. / 4. * np.pi, dilation_factor: float=2.0):
+    def xi(j, xi_0=3. / 4. * np.pi, dilation_factor: float=2.0):
         """Central frequency of the Morlet wavelet in unit of pixel^-1."""
-        return base_value / Wavelet2D.dilation(j, dilation_factor)
+        return xi_0 / Wavelet2D.dilation(j, dilation_factor)
 
     @staticmethod
-    def j2scale(j, pixel_length, base_value_k0=3. / 4. * np.pi, dilation_factor: float=2.0):
+    def j2scale(j, pixel_length, xi_0=3. / 4. * np.pi, dilation_factor: float=2.0):
         """Convert `j` to angular scale with the same unit as `pixel_length`."""
-        k0 = Morlet2D.k0(
-            j, base_value=base_value_k0, dilation_factor=dilation_factor
+        xi = Morlet2D.xi(
+            j, xi_0=xi_0, dilation_factor=dilation_factor
         )
-        return pixel_length / k0 * 2
+        return pixel_length / xi * 2
+
+    @staticmethod
+    def sigma2xi(sigma, Q):
+        """Convert sigma to xi given the quality factor Q."""
+        return Q / sigma
 
 
 def get_Gaussian_profile(
@@ -162,13 +187,13 @@ def get_Gaussian_profile(
     """Get the Gaussian profile in Fourier space.
 
     Args:
-        sigma: Standard deviation of the Gaussian.
+        sigma: Standard deviation of the Gaussian in angular units.
         pixel_length: Length of a pixel in the same unit as `sigma`.
         freq_samples: Frequency samples in units of pixel^-1.
     """
     sigma_in_pixel = sigma / pixel_length
-    k_samples = freq_samples * 2 * np.pi
-    return np.exp(- (k_samples * sigma_in_pixel)**2 / 2)
+    xi_samples = freq_samples * 2 * np.pi
+    return np.exp(- (xi_samples * sigma_in_pixel)**2 / 2)
 
 
 def get_freq_multipole_conversion_pair(pixel_length: float):
