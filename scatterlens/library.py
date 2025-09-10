@@ -544,6 +544,9 @@ class FilterLibrary:
             dtype: torch.dtype | None=None,
             region_MN: dict[int, tuple[int, int]] | None=None,
             padding: int=0,
+            Q: float=3. / 5. * np.pi,
+            sigma_0: float=0.8,
+            dilation_factor: float=2.0,
     ):
         """Library to store the filters in different regions."""
         self.libdir = libdir
@@ -560,7 +563,7 @@ class FilterLibrary:
                     if padding:
                         M += 2*padding
                         N += 2*padding
-                    fb = Morlet2D(M, N, J, L).gen_filter_bank(dtype=dtype)
+                    fb = Morlet2D(M, N, J, L, Q, sigma_0, dilation_factor).gen_filter_bank(dtype=dtype)
                     torch.save(fb, os.path.join(
                         libdir, self.fname.format(
                             region, M, N, J, L, str(dtype).split('.')[-1]))
