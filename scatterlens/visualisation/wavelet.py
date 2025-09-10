@@ -110,6 +110,5 @@ def plot_Morlet_wavelets(wavelets: torch.Tensor, return_fig_ax: bool=False):
             ax.axis("off")
             ax.set_title(r"$j={}$, $l={}$".format(j, l), fontsize=7)
 
-    return fig, axs
     if return_fig_ax:
         return fig, axs
