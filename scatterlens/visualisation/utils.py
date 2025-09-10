@@ -8,6 +8,8 @@ import cmplstyle
 from cmplstyle import onecol_wth, median_wth, fullpg_wth, cm2inch
 cmplstyle.use_builtin_mplstyle()
 
+plt.rcParams["figure.constrained_layout.use"] = False
+
 def zbin_combo_label(zbin_combo: tuple[int, ...]) -> str:
     """Convert a zbin combination to a string label."""
     return " + ".join(str(z) for z in zbin_combo)
