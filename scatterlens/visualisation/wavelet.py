@@ -10,6 +10,7 @@ def plot_Morlet_profile(
         Q: float=3. / 5. * np.pi,
         sigma_0: float=0.8,
         dilation_factor: float=2.0,
+        return_fig_ax: bool=False,
 ):
     """Plot the Morlet wavelet profiles in Fourier space.
 
@@ -22,6 +23,7 @@ def plot_Morlet_profile(
         Q: Quality factor for the Morlet wavelet.
         sigma_0: Base standard deviation for the Morlet wavelet.
         dilation_factor: Dilation factor for the wavelet.
+        return_fig_ax: Whether to return the figure and axis objects.
     """
     fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
 
@@ -66,16 +68,18 @@ def plot_Morlet_profile(
     second_ax.minorticks_on()
     second_ax.tick_params(axis="x", pad=1.)
 
-    return fig, ax
+    if return_fig_ax:
+        return fig, ax
 
 
-def plot_Morlet_wavelets(wavelets: torch.Tensor):
+def plot_Morlet_wavelets(wavelets: torch.Tensor, return_fig_ax: bool=False):
     """Plot the 2D Morlet wavelets in real space.
 
     Args:
         wavelets: Wavelets in Fourier space with shape (J, L, M, N). This can be
             generated using `Morlet2D.gen_filter_bank()` function and choose the
             key "psi" from the returned dictionary.
+        return_fig_ax: Whether to return the figure and axis objects.
     """
     from numpy.fft import ifft2
 
@@ -107,3 +111,5 @@ def plot_Morlet_wavelets(wavelets: torch.Tensor):
             ax.set_title(r"$j={}$, $l={}$".format(j, l), fontsize=7)
 
     return fig, axs
+    if return_fig_ax:
+        return fig, axs

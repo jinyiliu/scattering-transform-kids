@@ -4,6 +4,7 @@ def plot_Cov(
         cov: torch.Tensor,
         zbin_combos: list[tuple[int,...]],
         cmap="cividis",
+        return_fig_ax: bool=False,
 ):
     """Plot normalised covariance matrix."""
     from scatterlens.utils import cov2corr
@@ -40,6 +41,9 @@ def plot_Cov(
     ):
         ax.text(x=x, y=cov.shape[1] * 1.05, s=s, ha="center", va="top")
 
+    if return_fig_ax:
+        return fig, ax
+
 
 def plot_St_coefs(
         st_coefs: torch.Tensor,
@@ -48,6 +52,7 @@ def plot_St_coefs(
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
         color: str="石涅",
+        return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from covariance training data."""
     if st_coefs.ndim == 1:
@@ -72,7 +77,8 @@ def plot_St_coefs(
                 alpha=0.05,
             )
 
-    return fig, axs
+    if return_fig_ax:
+        return fig, axs
 
 
 def plot_St_coefs_vs_param(
@@ -85,6 +91,7 @@ def plot_St_coefs_vs_param(
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
         cmap: str="cividis",
+        return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from covariance training data."""
     if st_coefs.ndim == 1:
@@ -116,4 +123,5 @@ def plot_St_coefs_vs_param(
                 alpha=0.5,
             )
 
-    return fig, axs
+    if return_fig_ax:
+        return fig, axs
