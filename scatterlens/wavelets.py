@@ -61,7 +61,7 @@ class Morlet2D(Wavelet2D):
             ),
             xi=self.xi(
                 j,
-                xi_0=self.Q / self.sigma_0,
+                xi_0=self.xi_0,
                 dilation_factor=self.dialation_factor,
             ),
             theta=(int(self.L - self.L / 2 - 1) - l) / self.L * np.pi,
