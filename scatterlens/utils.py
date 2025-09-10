@@ -100,8 +100,8 @@ def cov2corr(cov: torch.Tensor) -> torch.Tensor:
 
 def mask_apodization(
         mask: np.ndarray,
-        xresol: float,
-        yresol: float,
+        x_pixel_length: float,
+        y_pixel_length: float,
         aposcale: float,
         apotype: str="C1",
 ) -> np.ndarray:
@@ -109,9 +109,9 @@ def mask_apodization(
 
     Args:
         mask: A binary mask.
-        xresol: Resolution of the mask in x-axis in arcminutes.
-        yresol: Resolution of the mask in y-axis in arcminutes.
-        aposcale: Apodization scale in arcminutes.
+        x_pixel_length: Pixel length of the mask in x-axis in arcmin.
+        y_pixel_length: Pixel length of the mask in y-axis in arcmin.
+        aposcale: Apodization scale in arcmin.
         apotype: Apodization type in ["C1", "C2", "Smooth"].
 
     Returns:
@@ -120,7 +120,7 @@ def mask_apodization(
     Notes:
         This is a wrapper for mask_apodization_flat function in pymaster.utils.
     """
-    lx = xresol * mask.shape[0] / 180 / 60
-    ly = yresol * mask.shape[1] / 180 / 60
+    lx = x_pixel_length * mask.shape[0] / 180 / 60
+    ly = y_pixel_length * mask.shape[1] / 180 / 60
     aposcale_deg = aposcale / 60
     return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)

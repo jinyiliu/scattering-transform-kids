@@ -10,8 +10,8 @@ _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/
 class KiDS1000:
     smoothing_scale = 6.6
     smoothing_scale_unit = "arcmin"
-    resol = 2.344
-    resol_unit = "arcmin"
+    pixel_length = 2.344
+    pixel_length_unit = "arcmin"
     region_indices = list(range(1, 19))
     zbin_indices = list(range(1, 6))
     _zbin_combo_to_ShapeNoise = {

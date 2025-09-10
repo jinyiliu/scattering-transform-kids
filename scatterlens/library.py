@@ -607,11 +607,11 @@ class MaskLibrary:
             assert hasattr(sims, "get_fid_massmap")
             assert callable(sims.get_fid_massmap)
             assert hasattr(sims, "region_MN")
-            assert hasattr(sims, "resol")
+            assert hasattr(sims, "pixel_length")
 
             self.fname = "Mask_R{}_M{}N{}.pt"
 
-            pixel_area = (sims.resol / 60) ** 2 # square degree
+            pixel_area = (sims.pixel_length / 60) ** 2 # square degree
             df = pd.DataFrame.from_dict(
                 sims.region_MN, orient='index', columns=['M', 'N'])
             sky_area = []
@@ -626,7 +626,7 @@ class MaskLibrary:
                         raise ValueError
                     else:
                         mask = torch.from_numpy(mask_apodization(
-                            mask_, sims.resol, sims.resol, aposcale, apotype,
+                            mask_, sims.pixel_length, sims.pixel_length, aposcale, apotype,
                         )).unsqueeze(0)
                 else:
                     mask = torch.from_numpy(mask_[None, :, :])
