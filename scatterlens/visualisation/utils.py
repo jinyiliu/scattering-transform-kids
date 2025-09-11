@@ -93,3 +93,29 @@ def get_colormap(
         return colormap_(norm(param_value))
 
     return sm, colormap
+
+
+def add_shared_colorbar_to_figure(
+        fig: mpl.figure.Figure,
+        axs: np.ndarray,
+        sm: plt.cm.ScalarMappable,
+        param_range: tuple[float, float],
+        param_label: str | None=None,
+):
+    """Add a colorbar to the figure."""
+    cbar = fig.colorbar(
+        sm,
+        ax=axs,
+        orientation="horizontal",
+        fraction=0.03,
+        pad=0.05,
+        aspect=30,
+    )
+    cbar_ticks = np.linspace(param_range[0], param_range[1], num=4)
+    cbar.set_ticks(cbar_ticks)
+    cbar.set_ticklabels(
+        ticklabels=[f"{tick:.2f}" for tick in cbar_ticks], fontsize=7,
+    )
+    cbar.ax.tick_params(length=2.0)
+    if param_label is not None:
+        cbar.set_label(param_label, fontsize=8)
