@@ -531,7 +531,7 @@ class CovStLibrary(_StLibrary):
         cov = torch.cov(scoef_tensor.t())
 
         if return_mean_dv:
-            scoef_tensor = scoef_tensor.mean(dim=1, keepdim=False)
+            scoef_tensor = torch.mean(scoef_tensor, dim=0)
             return cov, scoef_tensor
         else:
             return cov
