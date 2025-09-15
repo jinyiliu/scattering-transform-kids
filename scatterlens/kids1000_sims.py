@@ -103,6 +103,7 @@ class CosmoSLICS(KiDS1000):
         "h": [0.6, 0.9],
         "w_0": [-2.0, 0.5],
     }
+    param_labels = [r"$\Omega_\mathrm{m}$", r"$S_8$", r"$h$", r"$w_0$"]
 
     @staticmethod
     def get_sim_massmap(
