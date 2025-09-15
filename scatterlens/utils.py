@@ -46,7 +46,11 @@ def run_mp_scattering(
         ]
         args_list += cov_args_list
 
-    multiprocessing.set_start_method("spawn")
+    try:
+        multiprocessing.set_start_method("spawn")
+    except RuntimeError:
+        pass
+
     pool = multiprocessing.Pool(processes=processes)
 
     async_results = [
