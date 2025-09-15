@@ -99,19 +99,20 @@ def plot_St_coefs(
 
 def plot_St_coefs_vs_param(
         st_coefs: torch.Tensor,
-        param_values: torch.Tensor,
         zbin_combos: list[tuple[int, ...]],
+        param_values: torch.Tensor,
         st_coef_fid: torch.Tensor | None=None,
         param_range: tuple[float, float] | None=None,
+        param_label: str | None=None,
         n_cols: int=4,
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
-        cmap: str="cividis",
+        cmap: str="viridis",
         savedir: str | None=None,
         fname: str="st_coefs_vs_param.pdf",
         return_fig_ax: bool=False,
 ):
-    """Plot scattering coefficients from covariance training data."""
+    """Plot scattering coefficients from cosmology training data."""
     if st_coefs.ndim == 1:
         st_coefs = st_coefs.unsqueeze(0)
 
@@ -137,9 +138,17 @@ def plot_St_coefs_vs_param(
                 st_coef[dv_length_per_combo * i: dv_length_per_combo * (i + 1)],
                 color=colormap(param_value),
                 zorder=0,
-                linewidth=1.0,
-                alpha=0.5,
+                linewidth=0.5,
+                alpha=1.0,
             )
+
+    add_shared_colorbar_to_figure(
+        fig=fig,
+        axs=axs,
+        sm=sm,
+        param_range=param_range,
+        param_label=param_label,
+    )
 
     if savedir is not None:
         fig.savefig(
