@@ -11,7 +11,7 @@ def plot_posterior_corner(
         samples: np.ndarray,
         contour_color: str="olive",
         param_ranges: list[tuple[float, float]] | None=None,
-        param_labels: list[str] | None=None,
+        param_texlabels: list[str] | None=None,
         param_ticks: list[tuple[float, ...]] | None=None,
         figsize: float=median_wth,
         histplot_bivariate: bool=True,
@@ -26,7 +26,7 @@ def plot_posterior_corner(
         samples: Samples from the posterior distribution.
         contour_color: Color of the contour lines and fill.
         param_ranges: Parameter ranges for the posterior distribution.
-        param_labels: Labels for the parameters. If None, will use the keys
+        param_texlabels: Labels for the parameters. If None, will use the keys
             of param_ranges.
         param_ticks: Ticks for the parameters.
         figsize: Width of the figure in cm.
@@ -155,7 +155,7 @@ def plot_posterior_corner(
                 zorder=-1,
             )
             ax.set_title(
-                label=param_labels[
+                label=param_texlabels[
                           i] + f" $={MAX:.2f}^{{+{HDI_RIGHT - MAX:.2f}}}_{{-{MAX - HDI_LEFT:.2f}}}$",
                 fontsize=7,
             )
@@ -174,8 +174,8 @@ def plot_posterior_corner(
 
     # Add x-tick labels and y-axis labels for the bottom row
     for i, ax in enumerate(axes[-1, :]):
-        if param_labels is not None:
-            ax.set_xlabel(param_labels[i])
+        if param_texlabels is not None:
+            ax.set_xlabel(param_texlabels[i])
         if param_ticks is not None:
             ax.set_xticklabels(
                 [f"${tick:.2g}$" for tick in param_ticks[i]],
@@ -185,8 +185,8 @@ def plot_posterior_corner(
     # Add y-tick labels and y-axis labels for the leftmost column
     for i, ax in enumerate(axes[:, 0]):
         if i != 0:
-            if param_labels is not None:
-                ax.set_ylabel(param_labels[i])
+            if param_texlabels is not None:
+                ax.set_ylabel(param_texlabels[i])
             if param_ticks is not None:
                 ax.set_yticklabels(
                     [f"${tick:.2g}$" for tick in param_ticks[i]],

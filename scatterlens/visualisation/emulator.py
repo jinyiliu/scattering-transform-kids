@@ -6,7 +6,7 @@ def plot_LOOCV(
         std: np.ndarray | None=None,
         param_values: torch.Tensor | None=None,
         param_range: tuple[float, float] | None=None,
-        param_label: str | None=None,
+        param_texlabel: str | None=None,
         cmap: str="viridis",
         n_cols: int=4,
         J: int | None=None,
@@ -27,7 +27,7 @@ def plot_LOOCV(
             If provided, the color of the lines will indicate the parameter
             values.
         param_range:
-        param_label:
+        param_texlabel:
         cmap:
         n_cols:
         J:
@@ -55,7 +55,7 @@ def plot_LOOCV(
             axs=axs,
             sm=sm,
             param_range=param_range,
-            param_label=param_label,
+            param_texlabel=param_texlabel,
         )
 
     for i, ax in enumerate(axs):
@@ -122,8 +122,9 @@ def plot_LOOCV(
 
 def plot_StEmu_parameter_dependence(
         emulator,
-        param_labels: list[str],
+        param_texlabels: list[str],
         param_ranges: list[tuple[float, float]],
+        param_names: list[str],
         fid_cosmo_params: torch.Tensor,
         fid_st_coef: torch.Tensor,
         zbin_combos: list[tuple[int, int]],
@@ -143,11 +144,13 @@ def plot_StEmu_parameter_dependence(
     fig_list = []
     axs_list = []
 
-    for param_label, param_range in zip(param_labels, param_ranges):
+    for param_index, (param_name, param_texlabel, param_range) in enumerate(
+            zip(param_names, param_texlabels, param_ranges)
+    ):
         param_values = torch.linspace(*param_range, steps=n_preds)
         cosmo_params = torch.clone(
             torch.broadcast_to(fid_cosmo_params, size=(n_preds, 4)))
-        cosmo_params[:, param_labels.index(param_label)] = param_values
+        cosmo_params[:, param_index] = param_values
 
         pred_st_coefs = []
         for cosmo_param in cosmo_params:
@@ -161,13 +164,13 @@ def plot_StEmu_parameter_dependence(
             std=std,
             param_values=param_values,
             param_range=param_range,
-            param_label=param_label,
+            param_texlabel=param_texlabel,
             cmap=cmap,
             n_cols=n_cols,
             J=J,
             ylabel=ylabel,
             savedir=savedir,
-            fname=fname.format(param_label),
+            fname=fname.format(param_name),
             return_fig_ax=True,
         )
         fig_list.append(fig)

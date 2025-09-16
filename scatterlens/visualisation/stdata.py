@@ -103,13 +103,14 @@ def plot_St_coefs_vs_param(
         param_values: torch.Tensor,
         st_coef_fid: torch.Tensor | None=None,
         param_range: tuple[float, float] | None=None,
-        param_label: str | None=None,
+        param_name: str="param",
+        param_texlabel: str | None=None,
         n_cols: int=4,
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
         cmap: str="viridis",
         savedir: str | None=None,
-        fname: str="st_coefs_vs_param.pdf",
+        fname: str="st_coefs_vs_{}.pdf",
         return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from cosmology training data."""
@@ -147,12 +148,12 @@ def plot_St_coefs_vs_param(
         axs=axs,
         sm=sm,
         param_range=param_range,
-        param_label=param_label,
+        param_texlabel=param_texlabel,
     )
 
     if savedir is not None:
         fig.savefig(
-            os.path.join(savedir, fname),
+            os.path.join(savedir, fname.format(param_name)),
             bbox_inches="tight",
         )
 

@@ -100,7 +100,7 @@ def add_shared_colorbar_to_figure(
         axs: np.ndarray,
         sm: plt.cm.ScalarMappable,
         param_range: tuple[float, float],
-        param_label: str | None=None,
+        param_texlabel: str | None=None,
 ):
     """Add a colorbar to the figure."""
     cbar = fig.colorbar(
@@ -117,5 +117,5 @@ def add_shared_colorbar_to_figure(
         ticklabels=[f"{tick:.2f}" for tick in cbar_ticks], fontsize=7,
     )
     cbar.ax.tick_params(length=2.0)
-    if param_label is not None:
-        cbar.set_label(param_label, fontsize=8)
+    if param_texlabel is not None:
+        cbar.set_label(param_texlabel, fontsize=8)
