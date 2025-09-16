@@ -330,7 +330,8 @@ class CosmolStLibrary(_StLibrary):
             j_end: int | None=None,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
-            savepath: str | os.PathLike | None=None,
+            savedir: str | os.PathLike | None=None,
+            fname: str="ML_TrainingSet.pt",
     ) -> dict[str, torch.Tensor] | None:
         """Return the training set for emulation of scattering coefficients with
         cosmological parameters as input.
@@ -377,8 +378,8 @@ class CosmolStLibrary(_StLibrary):
             "target": scoef_tensor,
         }
 
-        if savepath:
-            torch.save(training_set, savepath)
+        if savedir:
+            torch.save(training_set, os.path.join(savedir, fname))
 
         return training_set
 
@@ -505,6 +506,8 @@ class CovStLibrary(_StLibrary):
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             return_mean_dv: bool=False,
+            savedir: str | None=None,
+            fname: str="cov.pt",
     ):
         """Return the covariance matrix.
 
@@ -517,6 +520,8 @@ class CovStLibrary(_StLibrary):
             decorrelated_S2:
             return_mean_dv: If True, will return the mean data vector of the
                 covariance dataset.
+            savedir:
+            fname:
         """
         assert hasattr(self, "sims")
 
@@ -529,6 +534,9 @@ class CovStLibrary(_StLibrary):
             decorrelated_S2=decorrelated_S2,
         )
         cov = torch.cov(scoef_tensor.t())
+
+        if savedir:
+            torch.save(cov, os.path.join(savedir, fname))
 
         if return_mean_dv:
             scoef_tensor = torch.mean(scoef_tensor, dim=0)
