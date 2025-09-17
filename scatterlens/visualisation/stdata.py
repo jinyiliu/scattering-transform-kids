@@ -30,7 +30,7 @@ def plot_Cov(
         len([combo for combo in zbin_combos if len(combo) == 2]),
         len([combo for combo in zbin_combos if len(combo) > 2]),
     ])
-    dv_length_per_zbin_combo = cov.shape[0] // len(zbin_combos)
+    dv_length_per_zbin_combo = corr.shape[0] // len(zbin_combos)
     separation_edges = np.cumsum(zbin_combo_type_counts * dv_length_per_zbin_combo)
 
     for x in separation_edges[1:-1]:
@@ -41,7 +41,7 @@ def plot_Cov(
             (separation_edges[1:] + separation_edges[:-1]) / 2,
             ["auto", "pairs", "all"]
     ):
-        ax.text(x=x, y=cov.shape[1] * 1.05, s=s, ha="center", va="top")
+        ax.text(x=x, y=corr.shape[1] * 1.05, s=s, ha="center", va="top")
 
     if savedir is not None:
         fig.savefig(
