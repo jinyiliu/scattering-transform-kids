@@ -56,17 +56,21 @@ class Emulator:
     def predict(self, X):
         return self._predict(self.regressor, X)
 
-    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
+    def validation(
+            self,
+            norm_by_true: bool=True,
+            zero_is_perfect: bool=False,
+    ) -> list[np.ndarray]:
         """Perform leave-one-out cross-validation on the training set.
 
         Args:
-            return_residual_error: If True, returns residual error which is
-                the difference between the predicted and true values. If False,
-                returns predicted value divided by the true value.
+            norm_by_true: If True, returns residual error normalised by true
+                value. If False, returns absolute residual error.
+            zero_is_perfect: If True, zero represents perfect prediction. If
+                False, one represents perfect prediction.
         """
         loo = LeaveOneOut()
-
-        ALL_MSE = []
+        deviation_list = []
 
         for i, (train_index, test_index) in enumerate(loo.split(self.training_set["input"])):
             temp_regressor = self.regressor_type(**self.regressor_args)
@@ -74,16 +78,18 @@ class Emulator:
                 self.training_set["input"][train_index],
                 self.training_set["target"][train_index],
             )
-            mse = self._predict(temp_regressor, X=self._training_set["input"][test_index])[0]
+            pred = self._predict(temp_regressor, X=self._training_set["input"][test_index])[0]
+            true = self._training_set["target"][test_index][0]
+            deviation = pred - true
 
-            if return_residual_error:
-                mse -= self._training_set["target"][test_index][0]
-            else:
-                mse /= self._training_set["target"][test_index][0]
+            if norm_by_true:
+                deviation /= true
+                if not zero_is_perfect:
+                    deviation += 1.0
 
-            ALL_MSE.append(mse)
+            deviation_list.append(deviation)
 
-        return ALL_MSE
+        return deviation_list
 
     def _predict(self, regressor, X):
         if self.input_scaler is not None:
@@ -143,10 +149,14 @@ class S1S2Emulator(Emulator):
         return self._predict(regressors=self.regressors, X=X)
 
     @override
-    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
+    def validation(
+            self,
+            norm_by_true: bool=True,
+            zero_is_perfect: bool=False,
+    ) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        ALL_MSE = []
+        deviation_list = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -156,21 +166,22 @@ class S1S2Emulator(Emulator):
                 "target": self.training_set["target"][train_index],
             }
             temp_regressors = self._fit(temp_regressors, temp_training_set)
-            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            pred = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            true = self._training_set["target"][test_index][0]
+            deviation = pred - true
 
-            if return_residual_error:
-                mse -= self._training_set["target"][test_index][0]
-            else:
-                mse /= self._training_set["target"][test_index][0]
+            if norm_by_true:
+                deviation /= true
+                if not zero_is_perfect:
+                    deviation += 1.0
 
-            ALL_MSE.append(mse)
+            deviation_list.append(deviation)
 
-        return ALL_MSE
+        return deviation_list
 
 
     def _create_regressors(self) -> list[BaseEstimator] | list[list[BaseEstimator]]:
         """Instantiate regressors based on current configuration."""
-        # FIXME all regressors point to the same memory id
         if self.per_zbincombo_emulator:
             regressors = [
                 [
@@ -278,10 +289,14 @@ class PerZbincomboEmulator(Emulator):
         return self._predict(self.regressors, X)
 
     @override
-    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
+    def validation(
+            self,
+            norm_by_true: bool=True,
+            zero_is_perfect: bool=False,
+    ) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        ALL_MSE = []
+        deviation_list = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -294,16 +309,18 @@ class PerZbincomboEmulator(Emulator):
                 "target": self.training_set["target"][train_index],
             }
             temp_regressors = self._fit(temp_regressors, temp_training_set)
-            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            pred = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            true = self._training_set["target"][test_index][0]
+            deviation = pred - true
 
-            if return_residual_error:
-                mse -= self._training_set["target"][test_index][0]
-            else:
-                mse /= self._training_set["target"][test_index][0]
+            if norm_by_true:
+                deviation /= true
+                if not zero_is_perfect:
+                    deviation += 1.0
 
-            ALL_MSE.append(mse)
+            deviation_list.append(deviation)
 
-        return ALL_MSE
+        return deviation_list
 
 
 
@@ -385,10 +402,14 @@ class PerFeatureEmulator(Emulator):
         return Y
 
     @override
-    def validation(self, return_residual_error: bool = False) -> list[np.ndarray]:
+    def validation(
+            self,
+            norm_by_true: bool=True,
+            zero_is_perfect: bool=False,
+    ) -> list[np.ndarray]:
         loo = LeaveOneOut()
 
-        ALL_MSE = []
+        deviation_list = []
 
         for i, (train_index, test_index) in enumerate(
                 loo.split(self.training_set["input"])):
@@ -401,15 +422,17 @@ class PerFeatureEmulator(Emulator):
                 "target": self.training_set["target"][train_index],
             }
             temp_regressors = self._fit(temp_regressors, temp_training_set)
-            mse = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            pred = self._predict(temp_regressors, X=self._training_set["input"][test_index])[0]
+            true = self._training_set["target"][test_index][0]
+            deviation = pred - true
 
-            if return_residual_error:
-                mse -= self._training_set["target"][test_index][0]
-            else:
-                mse /= self._training_set["target"][test_index][0]
+            if norm_by_true:
+                deviation /= true
+                if not zero_is_perfect:
+                    deviation += 1.0
 
-            ALL_MSE.append(mse)
+            deviation_list.append(deviation)
 
-        return ALL_MSE
+        return deviation_list
 
 
