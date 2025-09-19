@@ -436,3 +436,19 @@ class PerFeatureEmulator(Emulator):
         return deviation_list
 
 
+def get_emulation_uncertainty_cov_diag(
+        deviation_list: list[np.ndarray],
+        exclude_indices: list[int] | None=None,
+) -> np.ndarray:
+    """Estimate diagonal of emulation uncertainty covariance matrix.
+
+    Args:
+        deviation_list: List of deviation (pred - true) arrays from LOOCV.
+        exclude_indices: List of indices to exclude from covariance
+            estimation. This can be used to exclude outliers.
+    """
+    if exclude_indices is not None:
+        deviation_list = np.delete(deviation_list, exclude_indices, axis=0)
+
+    cov_diag = np.eye(len(deviation_list[0])) * np.mean(np.array(deviation_list)**2, axis=0)
+    return cov_diag
