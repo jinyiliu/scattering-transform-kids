@@ -148,7 +148,7 @@ class Scattering2D(object):
                 del I1
 
                 for j2 in range(J):
-                    if j2 >= j1:
+                    if j2 > j1:
                         if self.downsample_algo:
                             _images_f = _subsample_fourier(I1_f, M=M, N=N, j=j2)
                         else:
