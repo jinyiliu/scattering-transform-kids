@@ -26,6 +26,12 @@ class MCMC:
 
         self.emulator = emulator
         self.dv = data_vector
+
+        try:
+            np.linalg.cholesky(covariance_matrix)
+        except np.linalg.LinAlgError:
+            raise ValueError("Covariance matrix is not positive definite.")
+
         self.cov = covariance_matrix
         self.inv_cov = np.linalg.inv(covariance_matrix)
         self.likelihood_type = likelihood_type
@@ -55,7 +61,9 @@ class MCMC:
 
     def _Sellentin_Heavens_log_likelihood(self, cosm_params):
         chi2 = self.chi2(cosm_params)
-        return -0.5 * self.n_simulations * np.log(1 + chi2 / self.n_simulations) + self._log_prior(cosm_params)
+        posterior = -0.5 * self.n_simulations * np.log(1 + chi2 / self.n_simulations)
+        posterior += self._log_prior(cosm_params)
+        return posterior
 
     def _Hartlap(self, cosm_params):
         pass
