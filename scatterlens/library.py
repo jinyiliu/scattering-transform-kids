@@ -505,6 +505,7 @@ class CovStLibrary(_StLibrary):
             region: int | Sequence[int] | None=None,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
+            Hartlap_correction: bool=False,
             return_mean_dv: bool=False,
             savedir: str | None=None,
             fname: str="cov.pt",
@@ -518,6 +519,8 @@ class CovStLibrary(_StLibrary):
             region:
             drop_S0:
             decorrelated_S2:
+            Hartlap_correction: If True, will apply the Hartlap correction to
+                the covariance matrix.
             return_mean_dv: If True, will return the mean data vector of the
                 covariance dataset.
             savedir:
@@ -534,6 +537,10 @@ class CovStLibrary(_StLibrary):
             decorrelated_S2=decorrelated_S2,
         )
         cov = torch.cov(scoef_tensor.t())
+        if Hartlap_correction:
+            n_dv = scoef_tensor.shape[1]
+            n_LOS = scoef_tensor.shape[0]
+            cov *= (n_LOS - 1) / (n_LOS - n_dv - 2)
 
         if savedir:
             torch.save(cov, os.path.join(savedir, fname))
