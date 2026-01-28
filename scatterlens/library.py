@@ -568,7 +568,10 @@ class FilterLibrary:
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
 
-        if region_MN is not None:
+        if (
+                region_MN is not None and
+                not len(os.listdir(self.libdir)) == len(region_MN)
+        ):
             if J and L and dtype:
                 self.J = J
                 self.L = L
@@ -618,7 +621,10 @@ class MaskLibrary:
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
 
-        if sims is not None:
+        if (
+                sims is not None and
+                not os.path.exists(os.path.join(self.libdir, "Sky_Areas.txt"))
+        ):
             assert hasattr(sims, "get_fid_massmap")
             assert callable(sims.get_fid_massmap)
             assert hasattr(sims, "region_MN")
@@ -632,7 +638,7 @@ class MaskLibrary:
             sky_area = []
 
             for region in sims.region_MN.keys():
-                mass = sims.get_fid_massmap(zbin_combo=(1,), LOS=1, region=region)
+                mass = sims.get_fid_massmap(zbin_combo=sims.zbin_combos[0], LOS=1, region=region)
                 mask_ = np.array(mass != 0., dtype=np.float64)
 
                 sky_area.append(mask_.sum() * pixel_area)
