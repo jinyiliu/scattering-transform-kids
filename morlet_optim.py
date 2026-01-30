@@ -17,6 +17,7 @@ from scatterlens.library import FilterLibrary, MaskLibrary, CosmolStLibrary, Cov
 from scatterlens.emulator import PerFeatureEmulator
 from scatterlens.kids1000_sims import CosmoSLICS, SLICS, KiDS1000
 from scatterlens.utils import run_mp_scattering
+from scatterlens.data.morlet_optim_x0 import x0_
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
@@ -25,69 +26,6 @@ KiDS1000.zbin_combos = zbin_combos
 
 lmin = 100
 lmax = 1600
-
-x0_ = { # initial guesses for [dilation_factor, xi_0]
-    "2": {
-        f"{2 * np.pi / 5:.2f}": [4.0, 0.7],
-        f"{3 * np.pi / 5:.2f}": [4.0, 0.7],
-        f"{4 * np.pi / 5:.2f}": [4.0, 0.7],
-        f"{5 * np.pi / 5:.2f}": [4.0, 0.7],
-        f"{6 * np.pi / 5:.2f}": [4.0, 0.7],
-        f"{7 * np.pi / 5:.2f}": [8.0, 0.8],
-        f"{8 * np.pi / 5:.2f}": [8.0, 0.8],
-        f"{9 * np.pi / 5:.2f}": [8.0, 0.8],
-    },
-    "3": {
-        f"{2 * np.pi / 5:.2f}": [2.0, 0.7],
-        f"{3 * np.pi / 5:.2f}": [2.0, 0.7],
-        f"{4 * np.pi / 5:.2f}": [2.0, 0.7],
-        f"{5 * np.pi / 5:.2f}": [2.0, 0.7],
-        f"{6 * np.pi / 5:.2f}": [2.5, 0.7],
-        f"{7 * np.pi / 5:.2f}": [2.5, 0.7],
-        f"{8 * np.pi / 5:.2f}": [3.0, 0.8],
-        f"{9 * np.pi / 5:.2f}": [3.0, 0.8],
-    },
-    "4": {
-        f"{2 * np.pi / 5:.2f}": [1.6, 0.7],
-        f"{3 * np.pi / 5:.2f}": [1.6, 0.7],
-        f"{4 * np.pi / 5:.2f}": [1.6, 0.7],
-        f"{5 * np.pi / 5:.2f}": [1.6, 0.7],
-        f"{6 * np.pi / 5:.2f}": [1.9, 0.7],
-        f"{7 * np.pi / 5:.2f}": [1.9, 0.7],
-        f"{8 * np.pi / 5:.2f}": [1.9, 0.8],
-        f"{9 * np.pi / 5:.2f}": [2.1, 0.8],
-    },
-    "5": {
-        f"{2 * np.pi / 5:.2f}": [1.4, 0.7],
-        f"{3 * np.pi / 5:.2f}": [1.4, 0.7],
-        f"{4 * np.pi / 5:.2f}": [1.4, 0.7],
-        f"{5 * np.pi / 5:.2f}": [1.5, 0.7],
-        f"{6 * np.pi / 5:.2f}": [1.5, 0.7],
-        f"{7 * np.pi / 5:.2f}": [1.7, 0.8],
-        f"{8 * np.pi / 5:.2f}": [1.7, 0.8],
-        f"{9 * np.pi / 5:.2f}": [1.7, 0.8],
-    },
-    "6": {
-        f"{2 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{3 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{4 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{5 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{6 * np.pi / 5:.2f}": [1.5, 0.8],
-        f"{7 * np.pi / 5:.2f}": [1.5, 0.8],
-        f"{8 * np.pi / 5:.2f}": [1.6, 0.8],
-        f"{9 * np.pi / 5:.2f}": [1.6, 0.8],
-    },
-    "7": {
-        f"{2 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{3 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{4 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{5 * np.pi / 5:.2f}": [1.3, 0.7],
-        f"{6 * np.pi / 5:.2f}": [1.4, 0.8],
-        f"{7 * np.pi / 5:.2f}": [1.4, 0.8],
-        f"{8 * np.pi / 5:.2f}": [1.4, 0.8],
-        f"{9 * np.pi / 5:.2f}": [1.4, 0.8],
-    },
-}
 
 def solve_boundary_conditions(J: int, Q: float, x0: list[float]=None):
     """Solve for the dilation factor and centre frequency of the mother wavelet
