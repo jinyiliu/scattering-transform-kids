@@ -182,7 +182,7 @@ def compute_FoM_given_J_and_Q(J: int, Q: float, run_scattering: bool=True):
 
 if __name__=="__main__":
     J_values = [2, 3, 4, 5, 6, 7]
-    Q_values = [fac * np.pi / 5 for fac in range(2, 10)]
+    Q_values = [fac * np.pi / 10 for fac in range(4, 19)]
 
     fom_values = np.empty((len(J_values), len(Q_values)))
 
