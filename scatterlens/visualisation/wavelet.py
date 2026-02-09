@@ -29,21 +29,16 @@ def plot_Morlet_profile(
         fname: Filename to save the figure.
         return_fig_ax: Whether to return the figure and axis objects.
     """
-    fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 6.))
+    fig, ax = plt.subplots(figsize=cm2inch(onecol_wth, 5.))
 
     for j_index, j in enumerate(js):
         ax.plot(
             freq_samples,
-            Morlet2D.get_profile(
-                j=j,
-                freq_samples=freq_samples,
-                Q=Q,
-                sigma_0=sigma_0,
-                dilation_factor=dilation_factor,
-            ),
+            Morlet2D.get_profile(j=j, freq=freq_samples, Q=Q, sigma_0=sigma_0,
+                                 dilation_factor=dilation_factor),
             label=f"$j=$ {j}",
             color=colors[j_index] if colors else None,
-            linewidth=0.5 if j==1 else 2.0,
+            linewidth=2.0,
         )
 
     gaussian_profile = get_Gaussian_profile(
