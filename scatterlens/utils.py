@@ -148,16 +148,18 @@ def FoM_Fisher_SLICS(
         cov:
         param_names: List of parameter names to compute the FoM for.
     """
-    cosmology: pd.DataFrame = SLICS.cosmology_info()
-    assert all(param in cosmology.columns for param in param_names)
+    param_names = list(param_names)
+    param_names_set = ["Omega_m", "S_8", "h", "w_0"]
+    cosmology: pd.DataFrame = SLICS.cosmology_info()[param_names_set]
+    assert all(param in param_names_set for param in param_names)
 
-    theta0 = np.array(cosmology[list(param_names)].values).astype(np.float64)
+    theta0 = np.array(cosmology[param_names].values).astype(np.float64)
 
-    def emu_predict(Omega_m_S_8: np.ndarray) -> np.ndarray:
-        return emulator.predict(np.array([[
-            *Omega_m_S_8,
-            *cosmology[cosmology.columns.difference(param_names)].values
-        ]])).squeeze()
+    def emu_predict(params: np.ndarray) -> np.ndarray:
+        cosmology[param_names] = params
+        return emulator.predict(
+            cosmology.values.astype(np.float64)[None, :]
+        ).squeeze()
 
     fk = ForecastKit(function=emu_predict, theta0=theta0, cov=cov)
     fisher = fk.fisher()
