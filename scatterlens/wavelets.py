@@ -125,21 +125,21 @@ class Morlet2D(Wavelet2D):
     @staticmethod
     def get_profile(
             j: int,
-            freq_samples: np.ndarray,
+            freq: np.ndarray | float,
             Q=3. / 5. * np.pi,
             sigma_0=0.8,
             dilation_factor: float=2.0,
     ) -> np.ndarray:
-        """Get the Morlet profile in Fourier space.
+        """Get the Morlet radial profile in Fourier space.
 
         Args:
             j:
-            freq_samples: Frequency samples in units of pixel^-1.
+            freq: Frequency samples in units of pixel^-1.
             Q: Quality factor, defined as xi * sigma.
             sigma_0: Base value for Morlet2D.sigma(j).
             dilation_factor: Dilation factor for the wavelet.
         """
-        xi_samples = freq_samples * 2 * np.pi
+        xi_samples = freq * 2 * np.pi
         sigma = Morlet2D.sigma(
             j,
             sigma_0=sigma_0,

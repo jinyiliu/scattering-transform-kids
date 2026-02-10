@@ -5,7 +5,6 @@ import torch
 import warnings
 import numpy as np
 from scipy.optimize import fsolve
-from derivkit.forecast_kit import ForecastKit
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern
