@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from copy import deepcopy
 from typing import override
+from derivkit import CalculusKit
 from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.model_selection import LeaveOneOut
@@ -105,6 +106,13 @@ class Emulator:
         if X_is_onedim:
             return Y.squeeze()
         return Y
+
+
+    def Jacobian(self, X) -> np.ndarray:
+        """Calculate Jacobian of the emulated function around X."""
+        assert self.is_fitted
+        calc = CalculusKit(self.predict, x0=X)
+        return calc.jacobian()
 
 
 class S1S2Emulator(Emulator):
