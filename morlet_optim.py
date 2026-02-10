@@ -15,7 +15,7 @@ from scatterlens.wavelets import Morlet2D, multiple2freq
 from scatterlens.library import FilterLibrary, MaskLibrary, CosmolStLibrary, CovStLibrary
 from scatterlens.emulator import PerFeatureEmulator
 from scatterlens.kids1000_sims import CosmoSLICS, SLICS, KiDS1000
-from scatterlens.utils import run_mp_scattering, FoM_SLICS_Fisher_Omega_m_and_S_8
+from scatterlens.utils import run_mp_scattering, FoM_Fisher_SLICS
 from scatterlens.data.morlet_optim_x0 import x0_
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -166,7 +166,7 @@ def compute_FoM_given_J_and_Q(J: int, Q: float, run_scattering: bool=True):
     )
     emu.fit()
 
-    return FoM_SLICS_Fisher_Omega_m_and_S_8(emulator=emu, cov=cov)
+    return FoM_Fisher_SLICS(emulator=emu, cov=cov)
 
 
 if __name__=="__main__":

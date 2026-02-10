@@ -1,10 +1,11 @@
 import torch
 import multiprocessing
 import numpy as np
-from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
+import pandas as pd
 from tqdm import tqdm
 from itertools import combinations
 from derivkit.forecast_kit import ForecastKit
+from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
 
 from scatterlens.emulator import Emulator
 from scatterlens.kids1000_sims import SLICS
@@ -135,19 +136,27 @@ def mask_apodization(
 
 
 
-def FoM_SLICS_Fisher_Omega_m_and_S_8(
+def FoM_Fisher_SLICS(
     emulator: Emulator,
     cov: np.ndarray | torch.Tensor,
-):
-    """Compute the FoM for Omega_m and S_8 using the Fisher matrix from the
-    SLICS simulations for KiDS-1000.
+    param_names: tuple[str]=("Omega_m", "S_8"),
+) -> float:
+    """Compute the FoM using the Fisher matrix from the SLICS simulations.
+
+    Args:
+        emulator:
+        cov:
+        param_names: List of parameter names to compute the FoM for.
     """
-    theta0 = np.array(
-        SLICS.cosmology_info()[["Omega_m", "S_8"]].values).astype(np.float64)
+    cosmology: pd.DataFrame = SLICS.cosmology_info()
+    assert all(param in cosmology.columns for param in param_names)
+
+    theta0 = np.array(cosmology[list(param_names)].values).astype(np.float64)
 
     def emu_predict(Omega_m_S_8: np.ndarray) -> np.ndarray:
         return emulator.predict(np.array([[
-            *Omega_m_S_8, *SLICS.cosmology_info()[["h", "w_0"]].values
+            *Omega_m_S_8,
+            *cosmology[cosmology.columns.difference(param_names)].values
         ]])).squeeze()
 
     fk = ForecastKit(function=emu_predict, theta0=theta0, cov=cov)
