@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import override
 from sklearn.base import BaseEstimator
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import LeaveOneOut
 
 # Part of this code is copied from Lars.
@@ -92,6 +91,10 @@ class Emulator:
         return deviation_list
 
     def _predict(self, regressor, X):
+        X_is_onedim = X.ndim == 1
+        if X_is_onedim:
+            X = X[None, :]
+
         if self.input_scaler is not None:
             X = self.input_scaler.transform(X)
 
@@ -99,6 +102,8 @@ class Emulator:
         if self.target_scaler is not None:
             Y = self.target_scaler.inverse_transform(Y)
 
+        if X_is_onedim:
+            return Y.squeeze()
         return Y
 
 
@@ -228,9 +233,12 @@ class S1S2Emulator(Emulator):
             ]
         return trained_regressors
 
-
+    @override
     def _predict(self, regressors, X):
-        # FIXME only works for one set of input parameters
+        X_is_onedim = X.ndim == 1
+        if X_is_onedim:
+            X = X[None, :]
+
         if self.input_scaler is not None:
             X = self.input_scaler.transform(X)
 
@@ -250,6 +258,8 @@ class S1S2Emulator(Emulator):
         if self.target_scaler is not None:
             Y = self.target_scaler.inverse_transform(Y)
 
+        if X_is_onedim:
+            return Y.squeeze()
         return Y
 
 
@@ -323,8 +333,6 @@ class PerZbincomboEmulator(Emulator):
         return deviation_list
 
 
-
-
     def _fit(self, regressors, training_set):
         target_array = training_set["target"].reshape(
             -1, self.n_zbincombo, self.n_S1 + self.n_S2
@@ -336,7 +344,12 @@ class PerZbincomboEmulator(Emulator):
         ]
         return trained_regressors
 
+    @override
     def _predict(self, regressors, X):
+        X_is_onedim = X.ndim == 1
+        if X_is_onedim:
+            X = X[None, :]
+
         if self.input_scaler is not None:
             X = self.input_scaler.transform(X)
 
@@ -346,6 +359,9 @@ class PerZbincomboEmulator(Emulator):
 
         if self.target_scaler is not None:
             Y = self.target_scaler.inverse_transform(Y)
+
+        if X_is_onedim:
+            return Y.squeeze()
         return Y
 
 
@@ -389,7 +405,10 @@ class PerFeatureEmulator(Emulator):
 
     @override
     def _predict(self, regressors, X):
-        # FIXME only works for one set of input parameters
+        X_is_onedim = X.ndim == 1
+        if X_is_onedim:
+            X = X[None, :]
+
         if self.input_scaler is not None:
             X = self.input_scaler.transform(X)
 
@@ -399,6 +418,8 @@ class PerFeatureEmulator(Emulator):
         if self.target_scaler is not None:
             Y = self.target_scaler.inverse_transform(Y)
 
+        if X_is_onedim:
+            return Y.squeeze()
         return Y
 
     @override
