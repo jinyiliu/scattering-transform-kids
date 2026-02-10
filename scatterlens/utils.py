@@ -4,6 +4,10 @@ import numpy as np
 from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
 from tqdm import tqdm
 from itertools import combinations
+from derivkit.forecast_kit import ForecastKit
+
+from scatterlens.emulator import Emulator
+from scatterlens.kids1000_sims import SLICS
 
 def mp_wapper_calc_scoef(stlib, *args):
     """Wapper function of scatter coefficients calculation for the use of
@@ -128,3 +132,25 @@ def mask_apodization(
     ly = y_pixel_length * mask.shape[1] / 180 / 60
     aposcale_deg = aposcale / 60
     return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
+
+
+
+def FoM_SLICS_Fisher_Omega_m_and_S_8(
+    emulator: Emulator,
+    cov: np.ndarray | torch.Tensor,
+):
+    """Compute the FoM for Omega_m and S_8 using the Fisher matrix from the
+    SLICS simulations for KiDS-1000.
+    """
+    theta0 = np.array(
+        SLICS.cosmology_info()[["Omega_m", "S_8"]].values).astype(np.float64)
+
+    def emu_predict(Omega_m_S_8: np.ndarray) -> np.ndarray:
+        return emulator.predict(np.array([[
+            *Omega_m_S_8, *SLICS.cosmology_info()[["h", "w_0"]].values
+        ]])).squeeze()
+
+    fk = ForecastKit(function=emu_predict, theta0=theta0, cov=cov)
+    fisher = fk.fisher()
+    FoM = np.sqrt(np.linalg.det(fisher))
+    return FoM
