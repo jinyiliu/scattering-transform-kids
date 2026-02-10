@@ -11,6 +11,7 @@ from abc import abstractmethod
 from scatterlens.scattering2d import Scattering2D
 from scatterlens.wavelets import Morlet2D
 from scatterlens.utils import mask_apodization
+from scatterlens.mcmc import Hartlap_factor
 
 
 def _get_Scattering2D_per_region(
@@ -540,7 +541,7 @@ class CovStLibrary(_StLibrary):
         if Hartlap_correction:
             n_dv = scoef_tensor.shape[1]
             n_LOS = scoef_tensor.shape[0]
-            cov *= (n_LOS - 1) / (n_LOS - n_dv - 2)
+            cov *= Hartlap_factor(n_LOS, n_dv)
 
         if savedir:
             torch.save(cov, os.path.join(savedir, fname))

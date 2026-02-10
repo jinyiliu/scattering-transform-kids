@@ -122,3 +122,8 @@ class MCMC:
             raise ValueError("MCMC sampler has not been run yet.")
         else:
             return self.sampler.get_chain(flat=flat)
+
+
+def Hartlap_factor(n_simulations: int, dv_length: int) -> float:
+    """Calculate the Hartlap factor for covariance matrix correction."""
+    return  (n_simulations - 1) / (n_simulations - dv_length - 2)
