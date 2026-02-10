@@ -8,7 +8,6 @@ from derivkit.forecast_kit import ForecastKit
 from pymaster.utils import mask_apodization_flat as _mask_apodization_flat
 
 from scatterlens.emulator import Emulator
-from scatterlens.kids1000_sims import SLICS
 
 def mp_wapper_calc_scoef(stlib, *args):
     """Wapper function of scatter coefficients calculation for the use of
@@ -141,13 +140,17 @@ def FoM_Fisher_SLICS(
     cov: np.ndarray | torch.Tensor,
     param_names: tuple[str]=("Omega_m", "S_8"),
 ) -> float:
-    """Compute the FoM using the Fisher matrix from the SLICS simulations.
+    """Compute the FoM using the Fisher matrix from the SLICS simulations. This
+    function is used to compute the FoM during optimization of the Morlet
+    wavelet configuration.
 
     Args:
         emulator:
         cov:
         param_names: List of parameter names to compute the FoM for.
     """
+    from scatterlens.kids1000_sims import SLICS
+
     param_names = list(param_names)
     param_names_set = ["Omega_m", "S_8", "h", "w_0"]
     cosmology: pd.DataFrame = SLICS.cosmology_info()[param_names_set]
