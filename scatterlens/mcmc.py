@@ -61,7 +61,7 @@ class MCMC:
 
     def _Sellentin_Heavens_log_likelihood(self, cosm_params):
         chi2 = self.chi2(cosm_params)
-        posterior = -0.5 * self.n_simulations * np.log(1 + chi2 / self.n_simulations)
+        posterior = -0.5 * self.n_simulations * np.log(1 + chi2 / (self.n_simulations - 1))
         posterior += self._log_prior(cosm_params)
         return posterior
 
