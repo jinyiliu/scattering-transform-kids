@@ -127,3 +127,11 @@ class MCMC:
 def Hartlap_factor(n_simulations: int, dv_length: int) -> float:
     """Calculate the Hartlap factor for covariance matrix correction."""
     return  (n_simulations - 1) / (n_simulations - dv_length - 2)
+
+def Sellentin_Heavens_factor(
+        n_simulations: int,
+        dv_length: int,
+        n_parameters: int,
+):
+    """Calculate the Sellentin-Heavens factor for covariance matrix correction."""
+    return (n_simulations - 1) / (n_simulations - dv_length + n_parameters - 1)
