@@ -7,6 +7,7 @@ def plot_Cov(
         savedir: str | None=None,
         fname: str="cov.pdf",
         return_fig_ax: bool=False,
+        zbin_combo_type_labels: list[str] | None=None,
 ):
     """Plot normalised covariance matrix."""
     from scatterlens.utils import cov2corr
@@ -23,25 +24,26 @@ def plot_Cov(
     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
     cbar.set_ticks([1., 0.5, 0., -0.5, -1.])
 
-    # Separate zbin_combos into auto, pairs, and 3+ bins
-    zbin_combo_type_counts = np.array([
-        0,
-        len([combo for combo in zbin_combos if len(combo) == 1]),
-        len([combo for combo in zbin_combos if len(combo) == 2]),
-        len([combo for combo in zbin_combos if len(combo) > 2]),
-    ])
-    dv_length_per_zbin_combo = corr.shape[0] // len(zbin_combos)
-    separation_edges = np.cumsum(zbin_combo_type_counts * dv_length_per_zbin_combo)
+    if zbin_combo_type_labels is not None:
+        # Separate zbin_combos into auto, pairs, and 3+ bins
+        zbin_combo_type_counts = np.array([
+            0,
+            len([combo for combo in zbin_combos if len(combo) == 1]),
+            len([combo for combo in zbin_combos if len(combo) == 2]),
+            len([combo for combo in zbin_combos if len(combo) > 2]),
+        ])
+        dv_length_per_zbin_combo = corr.shape[0] // len(zbin_combos)
+        separation_edges = np.cumsum(zbin_combo_type_counts * dv_length_per_zbin_combo)
 
-    for x in separation_edges[1:-1]:
-        ax.axvline(x=x, color="black", lw=0.7)
-        ax.axhline(y=x, color="black", lw=0.7)
+        for x in separation_edges[1:-1]:
+            ax.axvline(x=x, color="black", lw=0.7)
+            ax.axhline(y=x, color="black", lw=0.7)
 
-    for x, s in zip(
-            (separation_edges[1:] + separation_edges[:-1]) / 2,
-            ["auto", "pairs", "all"]
-    ):
-        ax.text(x=x, y=corr.shape[1] * 1.05, s=s, ha="center", va="top")
+        for x, s in zip(
+                (separation_edges[1:] + separation_edges[:-1]) / 2,
+                zbin_combo_type_labels,
+        ):
+            ax.text(x=x, y=corr.shape[1] * 1.05, s=s, ha="center", va="top")
 
     if savedir is not None:
         fig.savefig(
