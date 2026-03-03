@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pickle as pk
 
-from scatterlens.mcmc import Hartlap_factor
+from scatterlens.mcmc import Hartlap_factor, Sellentin_Heavens_factor
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -14,7 +14,9 @@ def greedy(
         n_iterations: int | None=None,
         zbin_combos: list[tuple[int, ...]] | None=None,
         Hartlap_correction: bool=False,
+        Sellentin_Heavens_correction: bool=False,
         n_simulations: int | None=None,
+        n_parameters: int | None=None,
         savepath: str=None
 ):
     """Greedy algorithm for data compression.
@@ -26,7 +28,9 @@ def greedy(
         n_iterations:
         zbin_combos:
         Hartlap_correction:
+        Sellentin_Heavens_correction:
         n_simulations:
+        n_parameters:
         savepath:
 
     Returns:
@@ -36,6 +40,7 @@ def greedy(
         FoM values.
     """
     assert iteration_mode in ["tomography", "dv_elements"]
+    assert not (Hartlap_correction and Sellentin_Heavens_correction)
 
     if isinstance(cov, torch.Tensor):
         cov = cov.numpy()
@@ -63,6 +68,12 @@ def greedy(
                     if Hartlap_correction:
                         assert n_simulations is not None
                         cov_slice *= Hartlap_factor(n_simulations, len(indices))
+
+                    if Sellentin_Heavens_correction:
+                        assert n_simulations is not None
+                        assert n_parameters is not None
+                        cov_slice *= Sellentin_Heavens_factor(
+                            n_simulations, len(indices), n_parameters)
 
                     try:
                         np.linalg.inv(cov_slice)
