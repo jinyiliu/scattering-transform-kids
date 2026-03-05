@@ -78,10 +78,6 @@ CovStLib = CovStLibrary(
     dtype=dtype,
 )
 
-cosmol_indices = CosmoSLICS.cosmol_indices
-region_indices = CosmoSLICS.region_indices
-zbin_combos = CosmoSLICS.zbin_combos
-
 
 # Emulator parameters
 regressor_type = GaussianProcessRegressor
@@ -93,3 +89,10 @@ input_scaler = MinMaxScaler()
 likelihood_type = "Sellentin_Heavens"
 n_walkers = 100
 n_steps = 1000
+
+param_priors = {
+    "Omega_m": ["flat", CosmoSLICS.param_ranges["Omega_m"]],
+    "S_8": ["flat", CosmoSLICS.param_ranges["S_8"]],
+    "h": ["flat", CosmoSLICS.param_ranges["h"]],
+    "w_0": ["flat", CosmoSLICS.param_ranges["w_0"]],
+}
