@@ -465,7 +465,7 @@ class PerFeatureEmulator(Emulator):
         return deviation_list
 
 
-def get_emulation_uncertainty_cov_diag(
+def get_emulation_uncertainty_cov(
         deviation_list: list[np.ndarray],
         exclude_indices: list[int] | None=None,
         diagonal_only: bool=False,
