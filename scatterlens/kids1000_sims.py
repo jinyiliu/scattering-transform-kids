@@ -50,6 +50,13 @@ class KiDS1000:
         17: (223, 253),
         18: (224, 159),
     }
+    delta_mbias_zbin = { # m-bias uncertainty for each zbin
+        1: 0.019,
+        2: 0.020,
+        3: 0.017,
+        4: 0.012,
+        5: 0.010,
+    }
 
     zbin_combos = create_zbin_combos(zbin_indices, r_max=2)
     zbin_combos.append((1, 2, 3, 4, 5))
