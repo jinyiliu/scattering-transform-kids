@@ -65,8 +65,8 @@ class MCMC:
         posterior += self._log_prior(cosm_params)
         return posterior
 
-    def _Hartlap(self, cosm_params):
-        pass
+    def _Gaussian_log_likelihood(self, params):
+        return -0.5 * (self.chi2(params)) + self._log_prior(params)
 
     def _Gaussian_log_likelihood(self, cosm_params):
         return -0.5 * np.log * (self.chi2(cosm_params)) + self._log_prior(cosm_params)
