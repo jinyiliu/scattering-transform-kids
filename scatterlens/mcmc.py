@@ -52,13 +52,6 @@ class MCMC:
                 raise ValueError(f"Unknown likelihood type: {self.likelihood_type}")
 
 
-    def _log_prior(self, cosm_params):
-        """Log flat prior for the cosmological parameters."""
-        # TODO support Gaussian priors
-        for param, value in zip(self.param_ranges.keys(), cosm_params):
-            if value < self.param_ranges[param][0] or value > self.param_ranges[param][1]:
-                return -np.inf
-        return 0.0
     def _log_prior(self, params):
         """Log prior of the parameters.
 
