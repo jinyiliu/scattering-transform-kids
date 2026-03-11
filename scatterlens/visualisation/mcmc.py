@@ -10,6 +10,7 @@ CONFIDENCE_LEVELS_2D = (0.393, 0.864)
 def plot_posterior_corner(
         samples: np.ndarray,
         contour_color: str="olive",
+        quantiles: tuple[float]=(0.16, 0.5, 0.84),
         param_ranges: list[tuple[float, float]] | None=None,
         param_texlabels: list[str] | None=None,
         param_ticks: list[tuple[float, ...]] | None=None,
@@ -25,6 +26,7 @@ def plot_posterior_corner(
     Args:
         samples: Samples from the posterior distribution.
         contour_color: Color of the contour lines and fill.
+        quantiles: Quantiles to display on the diagonal plots.
         param_ranges: Parameter ranges for the posterior distribution.
         param_texlabels: Labels for the parameters. If None, will use the keys
             of param_ranges.
@@ -121,7 +123,7 @@ def plot_posterior_corner(
                     ax.scatter(truths[j], truths[i], color="red", marker=".",
                                zorder=10)
 
-    MAX_HDI = get_marginal_MAX_HDI(samples)
+    qvalues = compute_quantiles(samples)
 
     for i, ax in enumerate(axes_diag):  # diagonal
         samples_i = samples[:, i]
@@ -146,17 +148,17 @@ def plot_posterior_corner(
             )
             ax.margins(y=0.1)
             ax.set_ylim(bottom=0.0)
-            MAX, (HDI_LEFT, HDI_RIGHT) = MAX_HDI[i]
+            qlow, qmid, qhigh = qvalues[i]
             ax.fill_betweenx(
                 y=[0, ax.get_ylim()[1]],
-                x1=HDI_LEFT,
-                x2=HDI_RIGHT,
+                x1=qlow,
+                x2=qhigh,
                 color="lightgrey",
                 zorder=-1,
             )
             ax.set_title(
-                label=param_texlabels[
-                          i] + f" $={MAX:.2f}^{{+{HDI_RIGHT - MAX:.2f}}}_{{-{MAX - HDI_LEFT:.2f}}}$",
+                label=param_labels[
+                          i] + f" $={qmid:.2f}^{{+{qmid - qlow:.2f}}}_{{-{qhigh - qmid:.2f}}}$",
                 fontsize=7,
             )
             ax.set_xlim(param_ranges[i])
