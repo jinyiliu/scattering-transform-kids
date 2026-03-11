@@ -200,31 +200,33 @@ def plot_posterior_corner(
         )
 
 
-def get_marginal_MAX_HDI(samples: np.ndarray) -> list:
-    """Calculate the maximum of the 1D marginal distributions with the
-    highest density interval (HDI) for each parameter.
+def compute_quantiles(
+        samples: np.ndarray | list[np.ndarray],
+        quantiles: tuple[float]=(0.16, 0.5, 0.84),
+):
+    """Compute sample quantiles."""
+    if samples.ndim == 1:
+        samples = list(samples)
+    quantiles = np.asarray(quantiles)
 
-    Args:
-        samples: Samples with shape (n_samples, n_params) or (n_samples,).
-    """
-    ret = []
-    if samples.ndim == 2:
-        samples = samples.T
-    else:
-        samples = samples[None, :]
+    qvalues = []
+
+    if not any((0. < quantile < 1.) for quantile in quantiles):
+        raise ValueError("Quantiles must be between 0 and 1")
 
     for samples_i in samples:
-        KDE = gaussian_kde(samples_i)
-        x = np.linspace(np.min(samples_i), np.max(samples_i), num=500)
-        MAX = float(x[np.argmax(KDE(x))])
+        qvalues_i = np.percentile(samples_i, list(100 * quantiles))
+        qvalues.append(qvalues_i.tolist())
 
-        IDATA = az.from_dict(
-            posterior={"p": samples_i[None, :]},
-        )
-        HDI = az.hdi(IDATA, hdi_prob=CONFIDENCE_LEVELS_1D[0])["p"]
-        ret.append([MAX, (float(HDI[0]), float(HDI[1]))])
-
-    if samples.ndim == 2:
-        return ret
+    if len(qvalues) == 1:
+        return qvalues[0]
     else:
-        return ret[0]
+        return qvalues
+
+
+def find_MAP(samples: np.ndarray) -> float:
+    """Find the maximum a posteriori (MAP) estimate from the samples."""
+    KDE = gaussian_kde(samples)
+    x = np.linspace(np.min(samples), np.max(samples), num=500)
+    MAP = float(x[np.argmax(KDE(x))])
+    return MAP
