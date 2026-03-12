@@ -123,7 +123,7 @@ def plot_posterior_corner(
                     ax.scatter(truths[j], truths[i], color="red", marker=".",
                                zorder=10)
 
-    qvalues = compute_quantiles(samples)
+    qvalues = compute_quantiles(samples, quantiles=quantiles)
 
     for i, ax in enumerate(axes_diag):  # diagonal
         samples_i = samples[:, i]
@@ -203,21 +203,28 @@ def plot_posterior_corner(
 
 
 def compute_quantiles(
-        samples: np.ndarray | list[np.ndarray],
+        samples: np.ndarray,
         quantiles: tuple[float]=(0.16, 0.5, 0.84),
 ):
-    """Compute sample quantiles."""
-    if samples.ndim == 1:
-        samples = list(samples)
+    """Compute sample quantiles.
+
+    Args:
+        samples: Samples from the posterior distribution. Can be a 1D array of
+            samples for a single parameter, or a 2D array of shape
+            (n_samples, n_params).
+        quantiles:
+    """
+    if np.ndim(samples) == 1:
+        samples = samples[:, np.newaxis] # convert to shape (n_samples, 1)
     quantiles = np.asarray(quantiles)
 
     qvalues = []
 
-    if not any((0. < quantile < 1.) for quantile in quantiles):
+    if not all((0. < quantile < 1.) for quantile in quantiles):
         raise ValueError("Quantiles must be between 0 and 1")
 
-    for samples_i in samples:
-        qvalues_i = np.percentile(samples_i, list(100 * quantiles))
+    for param_samples in samples.T:
+        qvalues_i = np.percentile(param_samples, list(100 * quantiles))
         qvalues.append(qvalues_i.tolist())
 
     if len(qvalues) == 1:
