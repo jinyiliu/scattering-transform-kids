@@ -1,3 +1,4 @@
+import numpy as np
 import seaborn as sns
 import arviz as az
 from scipy.stats import gaussian_kde
@@ -6,43 +7,73 @@ from scatterlens.visualisation.utils import *
 CONFIDENCE_LEVELS_1D = (0.682, 0.954)
 CONFIDENCE_LEVELS_2D = (0.393, 0.864)
 
+# TODO: support weights in the future
 
 def plot_posterior_corner(
-        samples: np.ndarray,
-        contour_color: str="olive",
+        samples: np.ndarray | list[np.ndarray],
+        color: str | list[str]="京绿",
+        fill: bool=False,
+        contour_kwargs: dict | None=None,
+        fill_kwargs: dict | None=None,
+        levels: tuple[float]=CONFIDENCE_LEVELS_2D,
         quantiles: tuple[float]=(0.16, 0.5, 0.84),
+        kde_bw_adjust: float=1.0,
         param_ranges: list[tuple[float, float]] | None=None,
-        param_texlabels: list[str] | None=None,
+        param_labels: list[str] | None=None,
         param_ticks: list[tuple[float, ...]] | None=None,
-        figsize: float=median_wth,
-        histplot_bivariate: bool=True,
-        histplot_diagonal: bool=False,
+        figsize: tuple[float] | float=median_wth,
         truths: list[float] | None=None,
+        plot_samples: bool=False,
+        plot_samples_kwargs: dict | None=None,
         savedir: str | None=None,
         fname: str="posterior_corner.pdf",
 ):
     """Plot corner plot of posterior distribution.
 
+    Notes:
+        This function uses seaborn.kdeplot to plot the contour of the posterior
+        distribution. The confidence levels for the contour are defined in
+        CONFIDENCE_LEVELS_2D.
+
     Args:
         samples: Samples from the posterior distribution.
-        contour_color: Color of the contour lines and fill.
+        kde_bw_adjust: Bandwidth adjustment for the kernel density estimation.
+            Higher values lead to smoother contours.
+        color: Base color of the contour lines and fill.
+        fill: Whether to fill the contour.
+        contour_kwargs: Additional keyword arguments for the sns.kdeplot for the contour.
+        fill_kwargs: Additional keyword arguments for the sns.kdeplot for the filled contour.
+        levels: Confidence levels for the contour.
         quantiles: Quantiles to display on the diagonal plots.
         param_ranges: Parameter ranges for the posterior distribution.
-        param_texlabels: Labels for the parameters. If None, will use the keys
+        param_labels: Labels for the parameters. If None, will use the keys
             of param_ranges.
         param_ticks: Ticks for the parameters.
-        figsize: Width of the figure in cm.
-        histplot_bivariate: Whether to plot bivariate histograms.
-        histplot_diagonal: Whether to plot histograms on the diagonal.
+        figsize: Tuple of figure size in cm. If a single float is supplied, it
+            will be used for both width and height.
         truths: Optional truth values for the parameters.
+        plot_samples: Whether to plot samples as hexbin in the lower triangle.
+        plot_samples_kwargs: Additional keyword arguments for the hexbin plot
+            of the samples.
         savedir:
         fname:
     """
+    if samples.ndim == 1:
+        raise NotImplementedError(
+            "1D samples are not supported."
+            "Please provide 2D samples with shape (n_samples, n_params)."
+        )
+
+    if not all(0. < level < 1. for level in levels):
+        raise ValueError("Confidence levels must be between 0 and 1")
+
+    if not all(0. < quantile < 1. for quantile in quantiles):
+        raise ValueError("Quantiles must be between 0 and 1")
+
     n_params = samples.shape[1]
     n_colors = len(CONFIDENCE_LEVELS_2D)
     colors = sns.light_palette(
-        color=contour_color, n_colors=n_colors + 2)[-n_colors:]
-    n_histbins = 50
+        color=color, n_colors=n_colors + 2)[-n_colors:]
 
     if param_ranges is None:
         param_ranges = np.vstack([samples.min(axis=0), samples.max(axis=0)]).T
@@ -60,8 +91,11 @@ def plot_posterior_corner(
     mpl.rcParams["xtick.top"] = False
     mpl.rcParams["ytick.right"] = False
 
+    if isinstance(figsize, float):
+        figsize = (figsize,) * 2
+
     fig, axes = plt.subplots(
-        figsize=cm2inch(figsize, figsize),
+        figsize=cm2inch(*figsize),
         ncols=n_params,
         nrows=n_params,
     )
@@ -79,39 +113,48 @@ def plot_posterior_corner(
         for j in range(n_params):
             ax = axes_lower[i, j]
             if isinstance(ax, plt.Axes):
-                if histplot_bivariate:
-                    sns.histplot(
+                if plot_samples:
+                    if param_ranges is not None:
+                        extent = (*param_ranges[j], *param_ranges[i])
+                    else:
+                        extent = None
+                    ax.hexbin(
+                        x=samples[:, j],
+                        y=samples[:, i],
+                        extent=extent,
+                        zorder=0,
+                        linewidths=0.05,
+                        **plot_samples_kwargs,
+                    )
+                levels = [1 - cfl for cfl in CONFIDENCE_LEVELS_2D[::-1]]
+                # TODO: check if these two sns.kdeplot can be merged
+                sns.kdeplot( # posterior contour plot
+                    x=samples[:, j],
+                    y=samples[:, i],
+                    ax=ax,
+                    levels=levels,
+                    color=color,
+                    bw_adjust=kde_bw_adjust,
+                    fill=False,
+                    # colors=colors,
+                    zorder=2,
+                    **contour_kwargs,
+                )
+                if fill:
+                    sns.kdeplot(
                         x=samples[:, j],
                         y=samples[:, i],
                         ax=ax,
-                        bins=n_histbins,
-                        binrange=(param_ranges[j], param_ranges[i]),
-                        cmap=sns.light_palette(color="darkgrey", as_cmap=True),
-                        zorder=-1,
+                        levels=levels,
+                        color=color,
+                        bw_adjust=kde_bw_adjust,
+                        fill=True, # use matplotlib.axes.Axes.contourf
+                        colors=colors,
+                        alpha=0.7,
+                        extend="max",
+                        zorder=1,
+                        **fill_kwargs,
                     )
-                levels = [1 - cfl for cfl in CONFIDENCE_LEVELS_2D[::-1]]
-                sns.kdeplot(
-                    x=samples[:, j],
-                    y=samples[:, i],
-                    ax=ax,
-                    levels=levels,
-                    color=contour_color,
-                    fill=True,  # use matplotlib.axes.Axes.contourf
-                    colors=colors,
-                    alpha=0.7,
-                    extend="max",
-                    zorder=0,
-                )
-                sns.kdeplot(
-                    x=samples[:, j],
-                    y=samples[:, i],
-                    ax=ax,
-                    levels=levels,
-                    color=contour_color,
-                    fill=False,  # use matplotlib.axes.Axes.contour
-                    colors=colors,
-                    zorder=0,
-                )
                 ax.set_xlim(param_ranges[j])
                 ax.set_ylim(param_ranges[i])
                 ax.set_xticks(param_ticks[j])
@@ -128,27 +171,18 @@ def plot_posterior_corner(
     for i, ax in enumerate(axes_diag):  # diagonal
         samples_i = samples[:, i]
         if isinstance(ax, plt.Axes):
-            if histplot_diagonal:
-                sns.histplot(
-                    samples_i,
-                    ax=ax,
-                    bins=n_histbins,
-                    binrange=param_ranges[i],
-                    element="step",
-                    fill=True,
-                    color="lightgrey",
-                    stat="density",
-                    zorder=-2,
-                )
             sns.kdeplot(
                 samples_i,
-                ax=ax, color=contour_color,
+                ax=ax,
+                bw_adjust=kde_bw_adjust,
+                color=color,
                 linewidth=1.6,
                 zorder=0,
             )
             ax.margins(y=0.1)
             ax.set_ylim(bottom=0.0)
             qlow, qmid, qhigh = qvalues[i]
+            # TODO: make this an optional feature
             ax.fill_betweenx(
                 y=[0, ax.get_ylim()[1]],
                 x1=qlow,
@@ -156,9 +190,9 @@ def plot_posterior_corner(
                 color="lightgrey",
                 zorder=-1,
             )
+            # TODO: make this an optional feature
             ax.set_title(
-                label=param_labels[
-                          i] + f" $={qmid:.2f}^{{+{qmid - qlow:.2f}}}_{{-{qhigh - qmid:.2f}}}$",
+                label=param_labels[i] + f" $={qmid:.2f}^{{+{qmid - qlow:.2f}}}_{{-{qhigh - qmid:.2f}}}$",
                 fontsize=7,
             )
             ax.set_xlim(param_ranges[i])
@@ -176,8 +210,8 @@ def plot_posterior_corner(
 
     # Add x-tick labels and y-axis labels for the bottom row
     for i, ax in enumerate(axes[-1, :]):
-        if param_texlabels is not None:
-            ax.set_xlabel(param_texlabels[i])
+        if param_labels is not None:
+            ax.set_xlabel(param_labels[i])
         if param_ticks is not None:
             ax.set_xticklabels(
                 [f"${tick:.2g}$" for tick in param_ticks[i]],
@@ -187,8 +221,8 @@ def plot_posterior_corner(
     # Add y-tick labels and y-axis labels for the leftmost column
     for i, ax in enumerate(axes[:, 0]):
         if i != 0:
-            if param_texlabels is not None:
-                ax.set_ylabel(param_texlabels[i])
+            if param_labels is not None:
+                ax.set_ylabel(param_labels[i])
             if param_ticks is not None:
                 ax.set_yticklabels(
                     [f"${tick:.2g}$" for tick in param_ticks[i]],
@@ -200,6 +234,8 @@ def plot_posterior_corner(
             os.path.join(savedir, fname),
             bbox_inches="tight",
         )
+
+    return fig, axes
 
 
 def compute_quantiles(
