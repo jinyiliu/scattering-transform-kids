@@ -19,7 +19,7 @@ def plot_posterior_corner(
         levels: tuple[float]=CONFIDENCE_LEVELS_2D,
         quantiles: tuple[float]=(0.16, 0.5, 0.84),
         kde_bw_adjust: float=1.0,
-        kde_gridsize: float=100,
+        kde_gridsize: int=100,
         param_ranges: list[tuple[float, float]] | None=None,
         param_labels: list[str] | None=None,
         param_ticks: list[tuple[float, ...]] | None=None,
@@ -63,6 +63,7 @@ def plot_posterior_corner(
         savedir:
         fname:
     """
+    # TODO: verbose option to print out the quantiles
     if samples.ndim == 1:
         raise NotImplementedError(
             "1D samples are not supported."
@@ -136,7 +137,6 @@ def plot_posterior_corner(
                         **plot_samples_kwargs,
                     )
                 levels = [1 - cfl for cfl in CONFIDENCE_LEVELS_2D[::-1]]
-                # TODO: check if these two sns.kdeplot can be merged
                 print("KDE plotting for parameters", j, "and", i)
                 sns.kdeplot( # posterior contour plot
                     x=samples[:, j],
@@ -145,6 +145,7 @@ def plot_posterior_corner(
                     levels=levels,
                     color=color,
                     bw_adjust=kde_bw_adjust,
+                    gridsize=kde_gridsize,
                     fill=False,
                     colors=[color] * len(levels) if same_contour_color else colors,
                     zorder=2,
@@ -158,6 +159,7 @@ def plot_posterior_corner(
                         levels=levels,
                         color=color,
                         bw_adjust=kde_bw_adjust,
+                        gridsize=kde_gridsize,
                         fill=True, # use matplotlib.axes.Axes.contourf
                         colors=colors,
                         alpha=0.7,
@@ -185,6 +187,7 @@ def plot_posterior_corner(
                 samples_i,
                 ax=ax,
                 bw_adjust=kde_bw_adjust,
+                gridsize=kde_gridsize,
                 color=color,
                 linewidth=1.6,
                 zorder=0,
