@@ -59,6 +59,7 @@ class MCMC:
             Support flat priors, ["flat", (low, high)], and Gausssian priors,
             ["gaussian", (mean, std)].
         """
+        # TODO: support correlated priors (i.e. photometric redshift)
         log_prior = 0.
 
         for param, value in zip(self.param_priors.keys(), params):
@@ -80,6 +81,7 @@ class MCMC:
 
 
     def _Sellentin_Heavens_log_likelihood(self, params):
+        # TODO: double check the formula for the likelihood
         chi2 = self.chi2(params)
         posterior = -0.5 * self.n_simulations * np.log(1 + chi2 / (self.n_simulations - 1))
         posterior += self._log_prior(params)
@@ -100,11 +102,7 @@ class MCMC:
 
     def _get_random_walk(self, n_walkers: int):
         """Generate a random walk for the MCMC."""
-        return np.random.uniform(
-            low=[self.param_ranges[param][0] for param in self.param_ranges],
-            high=[self.param_ranges[param][1] for param in self.param_ranges],
-            size=(n_walkers, self.n_dim),
-        )
+        # TODO: support correlated priors (i.e. photometric redshift)
         p0 = np.zeros((n_walkers, self.n_dim))
 
         for i, param in enumerate(self.param_priors.keys()):
@@ -147,8 +145,7 @@ class MCMC:
         p0 = self._get_random_walk(n_walkers=n_walkers)
         log_likelihood = self.get_log_likelihood_function()
 
-        sampler = EnsembleSampler(n_walkers, self.n_dim, log_likelihood)
-        state = sampler.run_mcmc(p0, n_burn_in_steps)
+        # TODO: sampling with correlated priors
         sampler = EnsembleSampler(
             n_walkers, self.n_dim, log_likelihood
         )
