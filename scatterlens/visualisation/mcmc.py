@@ -12,13 +12,14 @@ CONFIDENCE_LEVELS_2D = (0.393, 0.864)
 def plot_posterior_corner(
         samples: np.ndarray | list[np.ndarray],
         color: str | list[str]="京绿",
-        same_level_color: bool=False,
+        same_contour_color: bool=False,
         fill: bool=False,
         contour_kwargs: dict | None=None,
         fill_kwargs: dict | None=None,
         levels: tuple[float]=CONFIDENCE_LEVELS_2D,
         quantiles: tuple[float]=(0.16, 0.5, 0.84),
         kde_bw_adjust: float=1.0,
+        kde_gridsize: float=100,
         param_ranges: list[tuple[float, float]] | None=None,
         param_labels: list[str] | None=None,
         param_ticks: list[tuple[float, ...]] | None=None,
@@ -38,15 +39,17 @@ def plot_posterior_corner(
 
     Args:
         samples: Samples from the posterior distribution.
-        kde_bw_adjust: Bandwidth adjustment for the kernel density estimation.
-            Higher values lead to smoother contours.
         color: Base color of the contour lines and fill.
-        same_level_color: Whether to use the same color for all confidence levels.
+        same_contour_color: Whether to use the same color for all confidence levels.
         fill: Whether to fill the contour.
         contour_kwargs: Additional keyword arguments for the sns.kdeplot for the contour.
         fill_kwargs: Additional keyword arguments for the sns.kdeplot for the filled contour.
         levels: Confidence levels for the contour.
         quantiles: Quantiles to display on the diagonal plots.
+        kde_bw_adjust: Bandwidth adjustment for the kernel density estimation.
+            Higher values lead to smoother contours.
+        kde_gridsize: Gridsize for the kernel density estimation. Higher values
+            lead to smoother contours but longer computation time.
         param_ranges: Parameter ranges for the posterior distribution.
         param_labels: Labels for the parameters. If None, will use the keys
             of param_ranges.
@@ -74,12 +77,12 @@ def plot_posterior_corner(
 
     n_params = samples.shape[1]
     n_colors = len(CONFIDENCE_LEVELS_2D)
+    colors = sns.light_palette(
+        color=color, n_colors=n_colors + 2)[-n_colors:]
 
-    if same_level_color:
-        colors = [color] * n_colors
-    else:
-        colors = sns.light_palette(
-            color=color, n_colors=n_colors + 2)[-n_colors:]
+    fill_kwargs = fill_kwargs or {}
+    contour_kwargs = contour_kwargs or {}
+    plot_samples_kwargs = plot_samples_kwargs or {}
 
     if param_ranges is None:
         param_ranges = np.vstack([samples.min(axis=0), samples.max(axis=0)]).T
@@ -134,6 +137,7 @@ def plot_posterior_corner(
                     )
                 levels = [1 - cfl for cfl in CONFIDENCE_LEVELS_2D[::-1]]
                 # TODO: check if these two sns.kdeplot can be merged
+                print("KDE plotting for parameters", j, "and", i)
                 sns.kdeplot( # posterior contour plot
                     x=samples[:, j],
                     y=samples[:, i],
@@ -142,7 +146,7 @@ def plot_posterior_corner(
                     color=color,
                     bw_adjust=kde_bw_adjust,
                     fill=False,
-                    colors=colors,
+                    colors=[color] * len(levels) if same_contour_color else colors,
                     zorder=2,
                     **contour_kwargs,
                 )
