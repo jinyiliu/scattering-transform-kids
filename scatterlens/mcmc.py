@@ -231,15 +231,44 @@ def compute_quantiles(
         return qvalues
 
 
-def find_MAP(
+def estimate_MAP(
         samples: np.ndarray,
-        log_prob: np.ndarray,
+        method: str="kde",
+        log_prob: np.ndarray | None=None,
+        kde_kwargs: dict | None=None,
 ) -> list[float]:
-    """Find the maximum a posteriori (MAP) estimate from the samples according
+    """Estimate the maximum a posteriori (MAP) estimate from the samples according
     to the log probabilities.
     """
-    if not len(samples) == len(log_prob):
-        raise ValueError("Length of samples and log_prob must be the same")
+    n_samples, n_params = samples.shape
+    match method:
+        case "map_sample":
+            if log_prob is None:
+                raise ValueError("For sample_map method, log_prob must be provided.")
+            assert len(samples) == len(log_prob)
+            return samples[np.argmax(log_prob)].tolist()
 
-    return samples[np.argmax(log_prob)].tolist()
+        case "knn":
+            from sklearn.neighbors import NearestNeighbors
+            k = max(10, int(np.sqrt(n_samples)))
+            nbrs = NearestNeighbors(n_neighbors=k + 1).fit(samples)
+            dist, _ = nbrs.kneighbors(samples)
+            dist_safe = dist[:, 1:] + 1.e-10
+            dens = np.mean(1. / dist_safe, axis=1)
+            return samples[np.argmax(dens)].tolist()
+
+        case "meanshift":
+            raise NotImplementedError
+
+        case "kde":
+            from seaborn._statistics import KDE
+            MAPs = []
+            for param_samples in samples.T:
+                kde = KDE(**kde_kwargs)
+                dens, support = kde(param_samples)
+                MAPs.append(float(support[np.argmax(dens)]))
+            return MAPs
+
+        case _:
+            raise ValueError(f"Unknown method for MAP estimation.")
 
