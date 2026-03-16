@@ -27,6 +27,7 @@ def plot_posterior_corner(
         truths: list[float] | None=None,
         plot_samples: bool=False,
         plot_samples_kwargs: dict | None=None,
+        verbose: bool=False,
         savedir: str | None=None,
         fname: str="posterior_corner.pdf",
 ):
@@ -60,6 +61,7 @@ def plot_posterior_corner(
         plot_samples: Whether to plot samples as hexbin in the lower triangle.
         plot_samples_kwargs: Additional keyword arguments for the hexbin plot
             of the samples.
+        verbose:
         savedir:
         fname:
     """
@@ -137,7 +139,13 @@ def plot_posterior_corner(
                         **plot_samples_kwargs,
                     )
                 levels = [1 - cfl for cfl in CONFIDENCE_LEVELS_2D[::-1]]
-                print("KDE plotting for parameters", j, "and", i)
+                if verbose:
+                    print(
+                        "KDE plotting for parameters",
+                        param_labels[j] if param_labels else f"param_{j}",
+                        "and",
+                        param_labels[i] if param_labels else f"param_{i}",
+                    )
                 sns.kdeplot( # posterior contour plot
                     x=samples[:, j],
                     y=samples[:, i],
@@ -195,6 +203,11 @@ def plot_posterior_corner(
             ax.margins(y=0.1)
             ax.set_ylim(bottom=0.0)
             qlow, qmid, qhigh = qvalues[i]
+            if verbose:
+                print(
+                    param_labels[i] if param_labels else f"param_{i}",
+                    f"= {qmid:.3f} {{+{qmid - qlow:.3f}}} {{-{qhigh - qmid:.3f}}}",
+                )
             # TODO: make this an optional feature
             ax.fill_betweenx(
                 y=[0, ax.get_ylim()[1]],
