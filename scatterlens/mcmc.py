@@ -171,13 +171,19 @@ class MCMC:
         else:
             return self.sampler.get_chain(flat=flat)
 
-
     def save_chain(self, flat=True, fname="mcmc_chain.npy"):
         """Save the chain of samples from the MCMC sampler."""
         if self.sampler is None:
             raise ValueError("MCMC sampler has not been run yet.")
         else:
             np.save(fname, self.sampler.get_chain(flat=flat))
+
+    def save_log_prob(self, flat=True, fname="mcmc_log_prob.npy"):
+        """Save the log probabilities of the samples from the MCMC sampler."""
+        if self.sampler is None:
+            raise ValueError("MCMC sampler has not been run yet.")
+        else:
+            np.save(fname, self.sampler.get_log_prob(flat=flat))
 
 
 def Hartlap_factor(n_simulations: int, dv_length: int) -> float:
