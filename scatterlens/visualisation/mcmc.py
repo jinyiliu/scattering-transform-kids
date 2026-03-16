@@ -1,7 +1,6 @@
 import numpy as np
 import seaborn as sns
-import arviz as az
-from scipy.stats import gaussian_kde
+from scatterlens.mcmc import compute_quantiles
 from scatterlens.visualisation.utils import *
 
 CONFIDENCE_LEVELS_1D = (0.682, 0.954)
@@ -263,41 +262,3 @@ def plot_posterior_corner(
 
     return fig, axes
 
-
-def compute_quantiles(
-        samples: np.ndarray,
-        quantiles: tuple[float]=(0.16, 0.5, 0.84),
-):
-    """Compute sample quantiles.
-
-    Args:
-        samples: Samples from the posterior distribution. Can be a 1D array of
-            samples for a single parameter, or a 2D array of shape
-            (n_samples, n_params).
-        quantiles:
-    """
-    if np.ndim(samples) == 1:
-        samples = samples[:, np.newaxis] # convert to shape (n_samples, 1)
-    quantiles = np.asarray(quantiles)
-
-    qvalues = []
-
-    if not all((0. < quantile < 1.) for quantile in quantiles):
-        raise ValueError("Quantiles must be between 0 and 1")
-
-    for param_samples in samples.T:
-        qvalues_i = np.percentile(param_samples, list(100 * quantiles))
-        qvalues.append(qvalues_i.tolist())
-
-    if len(qvalues) == 1:
-        return qvalues[0]
-    else:
-        return qvalues
-
-
-def find_MAP(samples: np.ndarray) -> float:
-    """Find the maximum a posteriori (MAP) estimate from the samples."""
-    KDE = gaussian_kde(samples)
-    x = np.linspace(np.min(samples), np.max(samples), num=500)
-    MAP = float(x[np.argmax(KDE(x))])
-    return MAP

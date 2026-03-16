@@ -190,6 +190,7 @@ def Hartlap_factor(n_simulations: int, dv_length: int) -> float:
     """Calculate the Hartlap factor for covariance matrix correction."""
     return (n_simulations - 1) / (n_simulations - dv_length - 2)
 
+
 def Sellentin_Heavens_factor(
         n_simulations: int,
         dv_length: int,
@@ -197,3 +198,48 @@ def Sellentin_Heavens_factor(
 ):
     """Calculate the Sellentin-Heavens factor for covariance matrix correction."""
     return (n_simulations - 1) / (n_simulations - dv_length + n_parameters - 1)
+
+
+def compute_quantiles(
+        samples: np.ndarray,
+        quantiles: tuple[float]=(0.16, 0.5, 0.84),
+) -> list[float]:
+    """Compute sample quantiles.
+
+    Args:
+        samples: Samples from the posterior distribution. Can be a 1D array of
+            samples for a single parameter, or a 2D array of shape
+            (n_samples, n_params).
+        quantiles:
+    """
+    if np.ndim(samples) == 1:
+        samples = samples[:, np.newaxis] # convert to shape (n_samples, 1)
+    quantiles = np.asarray(quantiles)
+
+    qvalues = []
+
+    if not all((0. < quantile < 1.) for quantile in quantiles):
+        raise ValueError("Quantiles must be between 0 and 1")
+
+    for param_samples in samples.T:
+        qvalues_i = np.percentile(param_samples, list(100 * quantiles))
+        qvalues.append(qvalues_i.tolist())
+
+    if len(qvalues) == 1:
+        return qvalues[0]
+    else:
+        return qvalues
+
+
+def find_MAP(
+        samples: np.ndarray,
+        log_prob: np.ndarray,
+) -> list[float]:
+    """Find the maximum a posteriori (MAP) estimate from the samples according
+    to the log probabilities.
+    """
+    if not len(samples) == len(log_prob):
+        raise ValueError("Length of samples and log_prob must be the same")
+
+    return samples[np.argmax(log_prob)].tolist()
+
