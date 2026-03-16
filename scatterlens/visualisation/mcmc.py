@@ -24,6 +24,9 @@ def plot_posterior_corner(
         param_ticks: list[tuple[float, ...]] | None=None,
         figsize: tuple[float] | float=median_wth,
         truths: list[float] | None=None,
+        truths_kwargs: dict | None=None,
+        MAPs: list[float] | None=None,
+        MAPs_kwargs: dict | None=None,
         plot_samples: bool=False,
         plot_samples_kwargs: dict | None=None,
         verbose: bool=False,
@@ -57,6 +60,9 @@ def plot_posterior_corner(
         figsize: Tuple of figure size in cm. If a single float is supplied, it
             will be used for both width and height.
         truths: Optional truth values for the parameters.
+        truths_kwargs: Additional keyword arguments for plotting the truth values.
+        MAPs: Optional maximum a posteriori (MAP) estimates for the parameters.
+        MAPs_kwargs: Additional keyword arguments for plotting the MAP estimates.
         plot_samples: Whether to plot samples as hexbin in the lower triangle.
         plot_samples_kwargs: Additional keyword arguments for the hexbin plot
             of the samples.
@@ -64,7 +70,6 @@ def plot_posterior_corner(
         savedir:
         fname:
     """
-    # TODO: verbose option to print out the quantiles
     if samples.ndim == 1:
         raise NotImplementedError(
             "1D samples are not supported."
@@ -76,6 +81,32 @@ def plot_posterior_corner(
 
     if not all(0. < quantile < 1. for quantile in quantiles):
         raise ValueError("Quantiles must be between 0 and 1")
+
+    default_truths_kwargs = {
+        "color": "丹枫",
+        "marker": "x",
+        "zorder": 10,
+        "label": "Truth",
+    }
+
+    if truths:
+        if truths_kwargs is None:
+            truths_kwargs = default_truths_kwargs
+        else:
+            truths_kwargs = default_truths_kwargs.update(truths_kwargs)
+
+    default_MAPs_kwargs = {
+        "color": "明黄",
+        "marker": "x",
+        "zorder": 9,
+        "label": "MAP",
+    }
+
+    if MAPs:
+        if MAPs_kwargs is None:
+            MAPs_kwargs = default_MAPs_kwargs
+        else:
+            MAPs_kwargs = default_MAPs_kwargs.update(MAPs_kwargs)
 
     n_params = samples.shape[1]
     n_colors = len(CONFIDENCE_LEVELS_2D)
@@ -182,8 +213,29 @@ def plot_posterior_corner(
                 ax.set_yticklabels([])
 
                 if truths is not None:
-                    ax.scatter(truths[j], truths[i], color="red", marker=".",
-                               zorder=10)
+                    ax.scatter(
+                        truths[j], truths[i],
+                        **(
+                            truths_kwargs if (i, j) == (n_params - 1, 0) else
+                            {k: v for k, v in truths_kwargs.items() if (k != "label")}
+                        ),
+                    )
+
+                if MAPs is not None:
+                    ax.scatter(
+                        MAPs[j], MAPs[i],
+                        **(
+                            MAPs_kwargs if (i, j) == (n_params - 1, 0) else
+                            {k: v for k, v in MAPs_kwargs.items() if (k != "label")}
+                        ),
+                    )
+
+    fig.legend(
+        loc="upper right",
+        bbox_to_anchor=(0.8, 0.8),
+        prop={"family": "sans serif"},
+        frameon=False,
+    )
 
     qvalues = compute_quantiles(samples, quantiles=quantiles)
 
@@ -227,7 +279,20 @@ def plot_posterior_corner(
             ax.set_yticklabels([])
 
             if truths is not None:
-                ax.axvline(truths[i], color="red", lw=0.6, zorder=10)
+                ax.axvline(
+                    truths[i],
+                    color=truths_kwargs["color"],
+                    linewidth=0.8,
+                    zorder=truths_kwargs["zorder"],
+                )
+
+            if MAPs is not None:
+                ax.axvline(
+                    MAPs[i],
+                    color=MAPs_kwargs["color"],
+                    linewidth=0.8,
+                    zorder=MAPs_kwargs["zorder"],
+                )
 
     for ax in axes.flatten():
         ax.set_xlabel("")  # clear x-axis labels
