@@ -216,6 +216,58 @@ class SLICS(KiDS1000):
         return _cosmologies.loc[26]
 
 
+class IAMocks(KiDS1000):
+    # IA mocks currently only have auto and cross-zbin combinations
+    KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
+
+    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/IAMocks/"
+    simsname = "KiDS1000_IAMocks"
+    simspath = "MRres140.64arcs_IA{:.1f}_100Sqdeg_SN{:g}_NoMask_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
+    mapfname = "SN{:g}_test.KiDS1000GpAM.LOS{:d}.SS2.816.Ekappa.npy"
+
+    IA_values = list(map(float, range(-6, 7)))
+    LOS_indices = list(range(1, 51))
+
+    @staticmethod
+    def has_IA(IA: int | float) -> bool:
+        return float(IA) in IAMocks.IA_values
+
+    @staticmethod
+    def get_sim_massmap(
+            IA: int | float,
+            zbin_combo: tuple[int, ...],
+            LOS: int,
+    ) -> NDArray:
+        assert (
+            IAMocks.has_IA(IA)
+            and KiDS1000.has_zbin_combo(zbin_combo)
+            and IAMocks.has_LOS(LOS)
+        )
+        zbcut = KiDS1000.get_ZBcut(zbin_combo)
+        simspath = IAMocks.simspath.format(
+            IA, KiDS1000.get_shapenoise(zbin_combo), zbcut,
+        )
+        massmap = np.load(
+            os.path.join(
+                IAMocks._data_path,
+                simspath,
+                IAMocks.mapfname.format(
+                    KiDS1000.get_shapenoise(zbin_combo), LOS,
+                ),
+            )
+        )
+        return massmap
+
+    @staticmethod
+    def has_LOS(LOS: int) -> bool:
+        return 1 <= LOS <= 50
+
+    @staticmethod
+    def cosmology_info():
+        return CosmoSLICS.cosmology_info("fid")
+
+
+
 def _read_cosmologies_info() -> pd.DataFrame:
     fname = os.path.join(os.path.dirname(__file__), "data", "kids1000_cosmol.csv")
     df = pd.read_csv(
