@@ -103,6 +103,7 @@ def plot_St_coefs_vs_param(
         st_coefs: torch.Tensor,
         zbin_combos: list[tuple[int, ...]],
         param_values: torch.Tensor,
+        std: torch.Tensor | None=None,
         st_coef_fid: torch.Tensor | None=None,
         param_range: tuple[float, float] | None=None,
         param_name: str="param",
@@ -116,11 +117,14 @@ def plot_St_coefs_vs_param(
         return_fig_ax: bool=False,
 ):
     """Plot scattering coefficients from cosmology training data."""
+    st_coefs = st_coefs.clone()
     if st_coefs.ndim == 1:
         st_coefs = st_coefs.unsqueeze(0)
 
     if st_coef_fid is not None:
         st_coefs /= st_coef_fid.clone()
+        if std is not None:
+            std /= st_coef_fid.clone()
 
     if param_range is None:
         param_range = (param_values.min().item(), param_values.max().item())
@@ -143,6 +147,20 @@ def plot_St_coefs_vs_param(
                 zorder=0,
                 linewidth=0.5,
                 alpha=1.0,
+            )
+
+        if std is not None:
+            ax.fill_between(
+                x=np.arange(dv_length_per_combo),
+                y1=1 - std[
+                   dv_length_per_combo * i: dv_length_per_combo * (i + 1)
+                   ],
+                y2=1 + std[
+                   dv_length_per_combo * i: dv_length_per_combo * (i + 1)
+                   ],
+                color="荻色",
+                alpha=1.0,
+                zorder=-1,
             )
 
     add_shared_colorbar_to_figure(
