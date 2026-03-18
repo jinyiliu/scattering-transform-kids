@@ -86,6 +86,9 @@ IAStLib = IAStLibrary(
     J=J,
     L=L,
     dtype=dtype,
+    Q=Q,
+    sigma_0=sigma_0,
+    dilation_factor=dilation_factor,
 )
 
 
