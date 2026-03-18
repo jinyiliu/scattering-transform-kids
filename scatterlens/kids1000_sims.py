@@ -224,7 +224,7 @@ class IAMocks(KiDS1000):
     simsname = "KiDS1000_IAMocks"
     simspath = "MRres140.64arcs_IA{:.1f}_100Sqdeg_SN{:g}_NoMask_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = "SN{:g}_test.KiDS1000GpAM.LOS{:d}.SS2.816.Ekappa.npy"
-    massmap_MN = (300, 300)
+    region_MN = {"IA": (300, 300)}
 
     IA_values = list(map(float, range(-6, 7)))
     LOS_indices = list(range(1, 51))
@@ -238,7 +238,11 @@ class IAMocks(KiDS1000):
             IA: int | float,
             zbin_combo: tuple[int, ...],
             LOS: int,
+            region: str="IA",
     ) -> NDArray:
+        if region != "IA":
+            raise ValueError("Please set region to 'IA' when loading IA mock mass maps")
+
         assert (
             IAMocks.has_IA(IA)
             and KiDS1000.has_zbin_combo(zbin_combo)
