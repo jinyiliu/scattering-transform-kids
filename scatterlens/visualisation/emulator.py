@@ -2,7 +2,8 @@ from scatterlens.visualisation.utils import *
 
 def plot_LOOCV(
         st_deviation_list: list[np.ndarray],
-        zbin_combos,
+        zbin_combos: list[tuple[int, ...]],
+        st_coef_fid: torch.Tensor | np.ndarray | None=None,
         std: np.ndarray | None=None,
         param_values: torch.Tensor | None=None,
         param_range: tuple[float, float] | None=None,
@@ -21,6 +22,7 @@ def plot_LOOCV(
         st_deviation_list: List of deviations from the true value for each
             left-out sample.
         zbin_combos:
+        st_coef_fid: Fiducial scattering coefficients for the fiducial model.
         std: Standard deviation for the scattering coefficients. Used for
             comparing the deviation to the expected scatter.
         param_values: Parameter values corresponding to each left-out sample.
@@ -36,6 +38,9 @@ def plot_LOOCV(
         fname:
         return_fig_ax:
     """
+    if std is not None and st_coef_fid is not None:
+        std /= st_coef_fid.clone()
+
     fig, axs, dv_length_per_combo = create_zbin_combo_subplots(
         dv_length=len(st_deviation_list[0]),
         zbin_combos=zbin_combos,
