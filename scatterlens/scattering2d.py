@@ -12,8 +12,9 @@ from scatterlens.wavelets import Morlet2D
 
 class Scattering2D(object):
     def __init__(
-            self, M: int, N: int, J: int, L: int, padding: int=0, device="cpu",
-            filter_bank: dict[str, torch.Tensor] | str | None=None,
+            self, M: int, N: int, J: int, L: int, Q: float=3. / 5. * np.pi,
+            sigma_0: float=0.8, dilation_factor: float=2.0, padding: int=0,
+            device="cpu", filter_bank: dict[str, torch.Tensor] | str | None=None,
             dtype: torch.dtype=torch.float64, downsample_algo: bool=True,
             return_I1: bool=False):
         """Docstring.
@@ -23,6 +24,9 @@ class Scattering2D(object):
             N:
             J:
             L:
+            Q:
+            sigma_0:
+            dilation_factor:
             padding: The size of zero padding in pixels.
             filter_bank: The selected wavelets to be used for scattering.
                 If str, will load the filter_bank using `torch.load`. The dict
@@ -55,7 +59,9 @@ class Scattering2D(object):
 
         match filter_bank:
             case None:
-                filter_bank = Morlet2D(M, N, J, L).gen_filter_bank(dtype=dtype)
+                filter_bank = Morlet2D(
+                    M, N, J, L, Q, sigma_0, dilation_factor,
+                ).gen_filter_bank(dtype=dtype)
             case str():
                 if os.path.exists(filter_bank):
                     filter_bank = torch.load(filter_bank, weights_only=True)
@@ -82,6 +88,9 @@ class Scattering2D(object):
         self.N = N
         self.J = J
         self.L = L
+        self.Q = Q
+        self.sigma_0 = sigma_0
+        self.dilation_factor = dilation_factor
 
 
     def scattering(
