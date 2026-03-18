@@ -1,7 +1,7 @@
 import torch
 
 from scatterlens.kids1000_sims import *
-from scatterlens.library import CosmolStLibrary, FilterLibrary, MaskLibrary, CovStLibrary
+from scatterlens.library import CosmolStLibrary, FilterLibrary, MaskLibrary, CovStLibrary, IAStLibrary
 
 from sklearn.gaussian_process.kernels import Matern
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -31,6 +31,7 @@ cosmol_libdir = _libdir + "CosmoSlicsSt"
 filter_libdir = _libdir + "Filters"
 mask_libdir = _libdir + "Masks"
 cov_libdir = _libdir + "SlicsSt"
+ia_libdir = _libdir + "IASt"
 
 fig_savedir = _libdir + "Figures/"
 inference_savedir = _libdir + "Inference"
@@ -73,6 +74,15 @@ CovStLib = CovStLibrary(
     masklib=MaskLib,
     sims=SLICS,
     padding=padding,
+    J=J,
+    L=L,
+    dtype=dtype,
+)
+
+IAStLib = IAStLibrary(
+    libdir=ia_libdir,
+    sims=IAMocks,
+    padding=0,
     J=J,
     L=L,
     dtype=dtype,

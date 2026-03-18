@@ -15,7 +15,10 @@ from scatterlens.mcmc import Hartlap_factor
 
 
 def _get_Scattering2D_per_region(
-        region_MN: dict[int, tuple[int, int]], padding: int=0, filterlib=None, **kwargs
+        region_MN: dict[int | str, tuple[int, int]],
+        padding: int=0,
+        filterlib=None,
+        **kwargs
 ) -> dict[int, Scattering2D]:
     """Return a dict of Scattering2D instances for each region.
 
@@ -551,6 +554,77 @@ class CovStLibrary(_StLibrary):
             return cov, scoef_tensor
         else:
             return cov
+
+
+class IAStLibrary(_StLibrary):
+    def __init__(
+            self,
+            libdir: os.PathLike | str,
+            sims=None,
+            padding: int=0,
+            **St2Dkwargs,
+    ):
+        super().__init__(
+            libdir=libdir,
+            filterlib=None,
+            masklib=None,
+            sims=sims,
+            padding=padding,
+            **St2Dkwargs,
+        )
+        self.fname = "SCOEF_IA{:.1f}_Cosmolfid_ZB{}.pt"
+
+
+    def get_savepath(self, IA: int | float, zbin_combo: tuple[int, ...], region: str="IA"):
+        if region != "IA":
+            raise ValueError("Please set region to 'IA' for IAStLibrary.")
+
+        if hasattr(self, "sims"):
+            fname = self.fname.format(
+                IA, "u".join(str(zb) for zb in zbin_combo))
+        else:
+            fname_patt = "*_IA{:.1f}_Cosmolfid_ZB{}.pt".format(
+                IA, "u".join(str(zb) for zb in zbin_combo))
+            fname = self.glob_in_libdir(fname_patt=fname_patt)
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
+
+    def calc_sim_scoef(
+            self, IA: int | float, zbin_combo: tuple[int, ...]):
+        return super().calc_sim_scoef(
+            IA=IA, zbin_combo=zbin_combo, region="IA")
+
+    def get_sim_scoef(
+        self,
+        IA: int | float,
+        zbin_combo: tuple[int, ...],
+        LOS: int | Sequence[int] | None=None,
+        j_start: int | None=None,
+        j_end: int | None=None,
+        isotropic: bool=True,
+        drop_S0: bool=True,
+        decorrelated_S2: bool=True,
+        flatten: bool=True,
+        return_type: str="dict",
+    ):
+        st_paths = [self.get_savepath(IA, zbin_combo)]
+
+        return super()._get_sim_scoef_from_paths(
+            st_paths=st_paths,
+            LOS=LOS,
+            region_weights=None,
+            j_start=j_start,
+            j_end=j_end,
+            isotropic=isotropic,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+            flatten=flatten,
+            return_type=return_type,
+        )
+    
+
+
 
 
 class FilterLibrary:

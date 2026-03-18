@@ -20,6 +20,7 @@ def mp_wapper_calc_scoef(stlib, *args):
 def run_mp_scattering(
         cosmolstlib=None,
         covstlib=None,
+        iastlib=None,
         processes: int=1,
 ):
     """Function to run the scatter calculation using multiprocessing.
@@ -27,9 +28,10 @@ def run_mp_scattering(
     Args:
         cosmolstlib: Instance of scatterlens.library.CosmolstLibrary.
         covstlib: Instance of scatterlens.library.CovstLibrary.
+        iastlib: Instance of scatterlens.library.IAStLibrary.
         processes: Number of processes to use.
     """
-    if not (cosmolstlib or covstlib):
+    if not (cosmolstlib or covstlib or iastlib):
         raise ValueError("Must specify at least one cosmolstlib or covstlib")
 
     args_list = []
@@ -49,6 +51,14 @@ def run_mp_scattering(
             for region in covstlib.sims.region_indices
         ]
         args_list += cov_args_list
+
+    if iastlib:
+        ia_args_list = [
+            (iastlib, ia, zbin_combo)
+            for ia in iastlib.sims.IA_values
+            for zbin_combo in iastlib.sims.zbin_combos
+        ]
+        args_list += ia_args_list
 
     try:
         multiprocessing.set_start_method("spawn")
