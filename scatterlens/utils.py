@@ -141,7 +141,13 @@ def mask_apodization(
     lx = x_pixel_length * mask.shape[0] / 180 / 60
     ly = y_pixel_length * mask.shape[1] / 180 / 60
     aposcale_deg = aposcale / 60
-    return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
+    if np.all(mask == 1.):
+        mask_ = np.zeros((mask.shape[0] + 2, mask.shape[1] + 2))
+        mask_[1:-1, 1:-1] = mask
+        mask_apo_ = _mask_apodization_flat(mask_, lx, ly, aposcale_deg, apotype)
+        return mask_apo_[1:-1, 1:-1]
+    else:
+        return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
 
 
 
