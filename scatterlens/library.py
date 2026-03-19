@@ -45,6 +45,7 @@ class _StLibrary:
             libdir: os.PathLike | str,
             filterlib=None,
             masklib=None,
+            mask: torch.Tensor | None=None,
             sims=None,
             padding: int=0,
             **St2Dkwargs):
@@ -57,12 +58,14 @@ class _StLibrary:
                 will calculate the filters on the fly.
             masklib: The scatterlens.library.MaskLibrary instance. If None, will
                 calculate the mask on the fly.
+            mask: The mask to be applied when calculating the scattering coefficients.
             sims: Simulation class.
             **St2Dkwargs: The keyword arguments for initialising Scattering2D.
         """
         self.libdir = libdir
         self.filterlib = filterlib
         self.masklib = masklib
+        self.mask = mask
         self.padding = padding
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
@@ -115,9 +118,13 @@ class _StLibrary:
             images[i] = torch.from_numpy(mass)
 
         if self.masklib:
+            # Prioritize the mask from masklib if masklib is given
             mask = self.masklib.get_savepath(region=region)
         else:
-            mask = images[0] != 0.
+            if self.mask is not None:
+                mask = self.mask
+            else:
+                mask = images[0] != 0.
 
         self.ST[region].scattering(images, mask=mask, savepath=savepath)
 
@@ -247,7 +254,14 @@ class CosmolStLibrary(_StLibrary):
             sims=None,
             padding: int=0,
             **St2Dkwargs):
-        super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
+        super().__init__(
+            libdir=libdir,
+            filterlib=filterlib,
+            masklib=masklib,
+            sims=sims,
+            padding=padding,
+            **St2Dkwargs,
+        )
         self.fname = "SCOEF_{}_Cosmol{}_ZB{}_R{}.pt"
 
 
@@ -398,7 +412,14 @@ class CovStLibrary(_StLibrary):
             sims=None,
             padding: int=0,
             **St2Dkwargs):
-        super().__init__(libdir, filterlib, masklib, sims, padding, **St2Dkwargs)
+        super().__init__(
+            libdir=libdir,
+            filterlib=filterlib,
+            masklib=masklib,
+            sims=sims,
+            padding=padding,
+            **St2Dkwargs,
+        )
         self.fname = "SCOEF_{}_ZB{}_R{}.pt"
 
 
@@ -562,12 +583,32 @@ class IAStLibrary(_StLibrary):
             libdir: os.PathLike | str,
             sims=None,
             padding: int=0,
+            aposcale: float | None=None,
+            apotype: str | None=None,
             **St2Dkwargs,
     ):
+        if apotype:
+            if not aposcale:
+                raise ValueError
+            self.apotype = apotype
+            self.aposcale = aposcale
+            mass = sims.get_sim_massmap(
+                IA=0.,
+                zbin_combo=sims.zbin_combos[0],
+                LOS=sims.LOS_indices[0],
+            )
+            mask_ = np.array(mass != 0., dtype=np.float64)
+            mask = torch.from_numpy(mask_apodization(
+                mask_, sims.pixel_length, sims.pixel_length, aposcale, apotype,
+            )).unsqueeze(0)
+        else:
+            mask = None
+
         super().__init__(
             libdir=libdir,
             filterlib=None,
             masklib=None,
+            mask=mask,
             sims=sims,
             padding=padding,
             **St2Dkwargs,
