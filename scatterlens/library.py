@@ -622,8 +622,44 @@ class IAStLibrary(_StLibrary):
             flatten=flatten,
             return_type=return_type,
         )
-    
 
+    def collect_scoef_for_IA(
+        self,
+        IA_values: list[int | float],
+        zbin_combos: list[tuple[int, ...]],
+        j_start: int | None=None,
+        j_end: int | None=None,
+        isotropic: bool=True,
+        drop_S0: bool=True,
+        decorrelated_S2: bool=True,
+        savedir: str | None=None,
+        fname: str="IA_scoef.pt",
+    ):
+        """Collect the scattering coefficients for different IA values."""
+        for IA_ind, IA in enumerate(IA_values):
+            for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
+                scoef = self.get_sim_scoef(
+                    IA=IA,
+                    zbin_combo=zbin_combo,
+                    LOS=None,
+                    j_start=j_start,
+                    j_end=j_end,
+                    drop_S0=drop_S0,
+                    isotropic=isotropic,
+                    decorrelated_S2=decorrelated_S2,
+                    flatten=True,
+                    return_type="sequence",
+                )
+                if "scoef_tensor" not in locals():
+                    scoef_tensor = torch.zeros(size=(
+                        len(IA_values),
+                        len(zbin_combos),
+                        len(scoef),
+                    ))
+                scoef_tensor[IA_ind, zbin_combo_ind, :] = scoef
+
+        scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
+        return scoef_tensor
 
 
 
