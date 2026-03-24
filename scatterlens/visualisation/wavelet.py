@@ -80,6 +80,8 @@ def plot_Morlet_profile(
 def plot_Morlet_wavelets(
         wavelets: torch.Tensor,
         return_fig_ax: bool=False,
+        savedir: str | None=None,
+        fname: str="Morlet2D_wavelets_real.pdf",
 ):
     """Plot the 2D Morlet wavelets in real space.
 
@@ -88,6 +90,8 @@ def plot_Morlet_wavelets(
             generated using `Morlet2D.gen_filter_bank()` function and choose the
             key "psi" from the returned dictionary.
         return_fig_ax: Whether to return the figure and axis objects.
+        savedir:
+        fname:
     """
     from numpy.fft import ifft2
 
@@ -95,7 +99,7 @@ def plot_Morlet_wavelets(
 
     fig, axs = plt.subplots(
         nrows=J - 1, ncols=L,
-        figsize=cm2inch(median_wth, median_wth)
+        figsize=cm2inch(median_wth, (J - 1) * 1.05 * median_wth / L)
     )
     fig.set_figwidth(cm2inch(median_wth))
 
@@ -116,7 +120,14 @@ def plot_Morlet_wavelets(
                 vmax=filter_r.max(),
             )
             ax.axis("off")
-            ax.set_title(r"$j={}$, $l={}$".format(j, l), fontsize=7)
+            ax.set_title(r"$j={}$, $l={}$".format(j + 1, l), fontsize=7)
+
+    if savedir:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
 
     if return_fig_ax:
         return fig, axs
