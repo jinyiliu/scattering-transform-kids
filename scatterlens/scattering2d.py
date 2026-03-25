@@ -94,9 +94,14 @@ class Scattering2D(object):
 
 
     def scattering(
-            self, images: torch.Tensor | NDArray, large_batch: bool=False,
+            self,
+            images: torch.Tensor | NDArray,
+            large_batch: bool=False,
             mask: torch.Tensor | NDArray | os.PathLike | str | None=None,
-            savepath: os.PathLike | str | None=None,):
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
+            savepath: os.PathLike | str | None=None,
+    ):
         """Docstring.
 
         Args:
@@ -104,11 +109,25 @@ class Scattering2D(object):
             large_batch:
             mask: A mask for the images where `mask = 1` indicates that the
                 pixel is included in the calculation.
+            mask_correction: The method to correct for the effect of mask.
+                If "fsky", the scattering coefficients will be divided by the
+                fraction of sky (fsky) covered by the mask. If "perturbative",
+                the scattering coefficients will be divided by
+                fsky * (1 - epsilon), where epsilon is the perturbative
+                correction factor calculated from the mask. If "local", the
+                scattering coefficients will be calculated locally by dividing
+                the scattering maps by the local fraction of sky weighted by the
+                modulus of the scattering wavelet. Defaults to "fsky".
+            local_fsky_min: Only average over the pixels where the local
+                fraction of sky is larger than this threshold. Only applicable
+                when `mask_correction` is "local".
             savepath: Path to save the computed scattering coefficients.
 
         Returns:
             A dict of scattering coefficients.
         """
+        assert mask_correction in ("fsky", "perturbative", "local")
+
         M, N, J, L = self.M, self.N, self.J, self.L
         if isinstance(images, np.ndarray):
             images = torch.from_numpy(images)
@@ -137,6 +156,18 @@ class Scattering2D(object):
         assert mask.shape[-2:] == images.shape[-2:]
         images_f = fft2(images * mask)  # the Fourier of images
 
+        if mask_correction == "local":
+            assert not self.downsample_algo, (
+                "Local mask correction is not compatible with downsample_algo."
+            )
+            C1 = ifft2(
+                fft2(mask)[None, :, :, :] * fft2(ifft2(self.psi).abs())
+            ).real # shape [J, L, M, N]
+            C2 = ifft2(
+                fft2(C1)[:, None, :, None, :, :] * fft2(ifft2(self.psi).abs())[None, :, None, :, :, :],
+            ).real # shape [J, J, L, L, M, N]
+
+
         if not large_batch:
             for j1 in range(J):
                 if self.downsample_algo:
@@ -147,10 +178,19 @@ class Scattering2D(object):
                 I1 = ifft2(
                         _images_f[:, None, :, :] * self.psi[j1][None, :, :, :],
                         dim=(-2, -1),
-                    ).abs()
+                    ).abs() # shape [num_images, L, M, N]
                 M1, N1 = I1.shape[-2:]
                 I1 *= (M1 * N1) / (M * N)
-                S1[:, j1] = torch.mean(I1, dim=(-2, -1)) / fsky
+                match mask_correction:
+                    case "fsky":
+                        S1[:, j1] = torch.mean(I1, dim=(-2, -1)) / fsky
+                    case "local":
+                        I1_ = I1 / C1[j1][None, :, :, :]
+                        I1_[:, C1[j1] < local_fsky_min] = float("nan")
+                        S1[:, j1] = torch.nanmean(I1_, dim=(-2, -1))
+                        del I1_
+                    case "perturbative":
+                        raise NotImplementedError
                 I1_f = fft2(I1)
                 if self.return_I1:
                     I1_SET.append(I1.mean(dim=1))
@@ -168,8 +208,17 @@ class Scattering2D(object):
                             dim=(-2, -1),
                         ).abs()
                         M2, N2 = I2.shape[-2:]
-                        I2 *= (M2 * N2) / (M1 * N1)
-                        S2[:, j1, j2, :, :] = torch.mean(I2, dim=(-2, -1)) / fsky
+                        I2 *= (M2 * N2) / (M1 * N1) # shape [num_images, L, L, M, N]
+                        match mask_correction:
+                            case "fsky":
+                                S2[:, j1, j2, :, :] = torch.mean(I2, dim=(-2, -1)) / fsky
+                            case "local":
+                                I2_ = I2 / C2[j1][j2][None, :, :, :, :]
+                                I2_[:, C2[j1][j2] < local_fsky_min] = float("nan")
+                                S2[:, j1, j2, :, :] = torch.nanmean(I2_, dim=(-2, -1))
+                                del I2_
+                            case "perturbative":
+                                raise NotImplementedError
                         del I2
         else:
             raise NotImplementedError
@@ -186,7 +235,12 @@ class Scattering2D(object):
 
     def _read_mask(self, mask: torch.Tensor | NDArray | os.PathLike | str | None=None):
         """Read the mask and calculate the fraction of sky (fsky) it covers. If
-        mask is None, return an all-ones mask and fksy=1."""
+        mask is None, return an all-ones mask and fksy=1.
+
+        Returns:
+            mask: A torch.Tensor of size [1, M, N].
+            fsky: A scalar indicating the fraction of sky covered by the mask.
+        """
         if mask is not None:
             if isinstance(mask, str):
                 if mask.endswith(".pt"):
