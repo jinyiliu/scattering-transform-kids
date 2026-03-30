@@ -24,6 +24,8 @@ apotype = "C2"
 aposcale = 5.0 # arcmin
 padding = 40 # pixel
 dtype = torch.float64
+mask_correction = "local" # "local" or "fsky"
+local_fsky_min = 0.9
 
 
 _libdir = f"/data2/jliu/stkids_data/KiDS-1000_StLib_{aposcale:.0f}amin{apotype}apo_{padding}pixZeropad/"
@@ -63,6 +65,8 @@ CosmolStLib = CosmolStLibrary(
     masklib=MaskLib,
     sims=CosmoSLICS,
     padding=padding,
+    mask_correction=mask_correction,
+    local_fsky_min=local_fsky_min,
     J=J,
     L=L,
     dtype=dtype,
@@ -74,6 +78,8 @@ CovStLib = CovStLibrary(
     masklib=MaskLib,
     sims=SLICS,
     padding=padding,
+    mask_correction=mask_correction,
+    local_fsky_min=local_fsky_min,
     J=J,
     L=L,
     dtype=dtype,
