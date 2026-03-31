@@ -15,7 +15,7 @@ class Scattering2D(object):
             self, M: int, N: int, J: int, L: int, Q: float=3. / 5. * np.pi,
             sigma_0: float=0.8, dilation_factor: float=2.0, padding: int=0,
             device="cpu", filter_bank: dict[str, torch.Tensor] | str | None=None,
-            dtype: torch.dtype=torch.float64, downsample_algo: bool=True,
+            dtype: torch.dtype=torch.float64, downsample_algo: bool=False,
             return_I1: bool=False):
         """Docstring.
 

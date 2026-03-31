@@ -14,6 +14,7 @@ L = 4
 Q = 3. / 5. * np.pi
 sigma_0 = 0.8
 dilation_factor = 2.0
+downsample_algo = False
 
 # Scattering scales to save
 j_start = 2
@@ -67,9 +68,11 @@ CosmolStLib = CosmolStLibrary(
     padding=padding,
     mask_correction=mask_correction,
     local_fsky_min=local_fsky_min,
+    # St2Dkwargs
     J=J,
     L=L,
     dtype=dtype,
+    downsample_algo=downsample_algo,
 )
 
 CovStLib = CovStLibrary(
@@ -80,9 +83,11 @@ CovStLib = CovStLibrary(
     padding=padding,
     mask_correction=mask_correction,
     local_fsky_min=local_fsky_min,
+    # St2Dkwargs
     J=J,
     L=L,
     dtype=dtype,
+    downsample_algo=downsample_algo,
 )
 
 IAStLib = IAStLibrary(
@@ -91,12 +96,14 @@ IAStLib = IAStLibrary(
     padding=padding + 10,
     apotype=apotype,
     aposcale=aposcale,
+    # St2Dkwargs
     J=J,
     L=L,
     dtype=dtype,
     Q=Q,
     sigma_0=sigma_0,
     dilation_factor=dilation_factor,
+    downsample_algo=downsample_algo,
 )
 
 
@@ -116,4 +123,9 @@ param_priors = {
     "S_8": ["flat", CosmoSLICS.param_ranges["S_8"]],
     "h": ["flat", CosmoSLICS.param_ranges["h"]],
     "w_0": ["flat", CosmoSLICS.param_ranges["w_0"]],
+    "dm1": ["gaussian", (0.0, KiDS1000.delta_mbias_zbin[1])],
+    "dm2": ["gaussian", (0.0, KiDS1000.delta_mbias_zbin[2])],
+    "dm3": ["gaussian", (0.0, KiDS1000.delta_mbias_zbin[3])],
+    "dm4": ["gaussian", (0.0, KiDS1000.delta_mbias_zbin[4])],
+    "dm5": ["gaussian", (0.0, KiDS1000.delta_mbias_zbin[5])],
 }
