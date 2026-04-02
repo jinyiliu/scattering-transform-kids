@@ -18,7 +18,7 @@ def _get_Scattering2D_per_region(
         region_MN: dict[int | str, tuple[int, int]],
         padding: int=0,
         filterlib=None,
-        **kwargs
+        **kwargs,
 ) -> dict[int, Scattering2D]:
     """Return a dict of Scattering2D instances for each region.
 
@@ -48,6 +48,8 @@ class _StLibrary:
             mask: torch.Tensor | None=None,
             sims=None,
             padding: int=0,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
             **St2Dkwargs):
         """Library to store the calculated coefficients for different
         cosmologies.
@@ -66,6 +68,8 @@ class _StLibrary:
         self.filterlib = filterlib
         self.masklib = masklib
         self.mask = mask
+        self.mask_correction = mask_correction
+        self.local_fsky_min = local_fsky_min
         self.padding = padding
         if not os.path.exists(self.libdir):
             os.makedirs(self.libdir)
@@ -126,7 +130,13 @@ class _StLibrary:
             else:
                 mask = images[0] != 0.
 
-        self.ST[region].scattering(images, mask=mask, savepath=savepath)
+        self.ST[region].scattering(
+            images,
+            mask=mask,
+            mask_correction=self.mask_correction,
+            local_fsky_min=self.local_fsky_min,
+            savepath=savepath,
+        )
 
 
     def _get_sim_scoef_from_paths(
@@ -253,6 +263,8 @@ class CosmolStLibrary(_StLibrary):
             masklib=None,
             sims=None,
             padding: int=0,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
             **St2Dkwargs):
         super().__init__(
             libdir=libdir,
@@ -260,6 +272,8 @@ class CosmolStLibrary(_StLibrary):
             masklib=masklib,
             sims=sims,
             padding=padding,
+            mask_correction=mask_correction,
+            local_fsky_min=local_fsky_min,
             **St2Dkwargs,
         )
         self.fname = "SCOEF_{}_Cosmol{}_ZB{}_R{}.pt"
@@ -411,6 +425,8 @@ class CovStLibrary(_StLibrary):
             masklib=None,
             sims=None,
             padding: int=0,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
             **St2Dkwargs):
         super().__init__(
             libdir=libdir,
@@ -418,6 +434,8 @@ class CovStLibrary(_StLibrary):
             masklib=masklib,
             sims=sims,
             padding=padding,
+            mask_correction=mask_correction,
+            local_fsky_min=local_fsky_min,
             **St2Dkwargs,
         )
         self.fname = "SCOEF_{}_ZB{}_R{}.pt"
@@ -585,6 +603,8 @@ class IAStLibrary(_StLibrary):
             padding: int=0,
             aposcale: float | None=None,
             apotype: str | None=None,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
             **St2Dkwargs,
     ):
         if apotype:
@@ -611,6 +631,8 @@ class IAStLibrary(_StLibrary):
             mask=mask,
             sims=sims,
             padding=padding,
+            mask_correction=mask_correction,
+            local_fsky_min=local_fsky_min,
             **St2Dkwargs,
         )
         self.fname = "SCOEF_IA{:.1f}_Cosmolfid_ZB{}.pt"
