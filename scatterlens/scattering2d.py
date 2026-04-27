@@ -111,10 +111,7 @@ class Scattering2D(object):
                 pixel is included in the calculation.
             mask_correction: The method to correct for the effect of mask.
                 If "fsky", the scattering coefficients will be divided by the
-                fraction of sky (fsky) covered by the mask. If "perturbative",
-                the scattering coefficients will be divided by
-                fsky * (1 - epsilon), where epsilon is the perturbative
-                correction factor calculated from the mask. If "local", the
+                fraction of sky (fsky) covered by the mask. If "local", the
                 scattering coefficients will be calculated locally by dividing
                 the scattering maps by the local fraction of sky weighted by the
                 modulus of the scattering wavelet. Defaults to "fsky".
@@ -126,7 +123,7 @@ class Scattering2D(object):
         Returns:
             A dict of scattering coefficients.
         """
-        assert mask_correction in ("fsky", "perturbative", "local")
+        assert mask_correction in ("fsky", "local")
 
         M, N, J, L = self.M, self.N, self.J, self.L
         if isinstance(images, np.ndarray):
@@ -189,8 +186,6 @@ class Scattering2D(object):
                         I1_[:, C1[j1] < local_fsky_min] = float("nan")
                         S1[:, j1] = torch.nanmean(I1_, dim=(-2, -1))
                         del I1_
-                    case "perturbative":
-                        raise NotImplementedError
                 I1_f = fft2(I1)
                 if self.return_I1:
                     I1_SET.append(I1.mean(dim=1))
@@ -217,8 +212,6 @@ class Scattering2D(object):
                                 I2_[:, C2[j1][j2] < local_fsky_min] = float("nan")
                                 S2[:, j1, j2, :, :] = torch.nanmean(I2_, dim=(-2, -1))
                                 del I2_
-                            case "perturbative":
-                                raise NotImplementedError
                         del I2
         else:
             raise NotImplementedError
