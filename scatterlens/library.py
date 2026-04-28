@@ -699,7 +699,7 @@ class IAStLibrary(_StLibrary):
         fname: str="IA_scoef.pt",
     ):
         """Collect the scattering coefficients for different IA values."""
-        for IA_ind, IA in enumerate(IA_values):
+        for A_IA_ind, A_IA in enumerate(A_IA_values):
             for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
                 scoef = self.get_sim_scoef(
                     A_IA=A_IA,
@@ -715,11 +715,11 @@ class IAStLibrary(_StLibrary):
                 )
                 if "scoef_tensor" not in locals():
                     scoef_tensor = torch.zeros(size=(
-                        len(IA_values),
+                        len(A_IA_values),
                         len(zbin_combos),
                         len(scoef),
                     ))
-                scoef_tensor[IA_ind, zbin_combo_ind, :] = scoef
+                scoef_tensor[A_IA_ind, zbin_combo_ind, :] = scoef
 
         scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
         return scoef_tensor
