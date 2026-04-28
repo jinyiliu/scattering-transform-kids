@@ -226,16 +226,16 @@ class IAMocks(KiDS1000):
     mapfname = "SN{:g}_test.KiDS1000GpAM.LOS{:d}.SS2.816.Ekappa.npy"
     region_MN = {"IA": (300, 300)}
 
-    IA_values = list(map(float, range(-6, 7)))
+    A_IA_values = list(map(float, range(-6, 7)))
     LOS_indices = list(range(1, 51))
 
     @staticmethod
-    def has_IA(IA: int | float) -> bool:
-        return float(IA) in IAMocks.IA_values
+    def has_A_IA(A_IA: int | float) -> bool:
+        return float(A_IA) in IAMocks.A_IA_values
 
     @staticmethod
     def get_sim_massmap(
-            IA: int | float,
+            A_IA: int | float,
             zbin_combo: tuple[int, ...],
             LOS: int,
             region: str="IA",
@@ -244,13 +244,13 @@ class IAMocks(KiDS1000):
             raise ValueError("Please set region to 'IA' when loading IA mock mass maps")
 
         assert (
-            IAMocks.has_IA(IA)
+            IAMocks.has_A_IA(A_IA)
             and KiDS1000.has_zbin_combo(zbin_combo)
             and IAMocks.has_LOS(LOS)
         )
         zbcut = KiDS1000.get_ZBcut(zbin_combo)
         simspath = IAMocks.simspath.format(
-            IA, KiDS1000.get_shapenoise(zbin_combo), zbcut,
+            A_IA, KiDS1000.get_shapenoise(zbin_combo), zbcut,
         )
         massmap = np.load(
             os.path.join(

@@ -613,7 +613,7 @@ class IAStLibrary(_StLibrary):
             self.apotype = apotype
             self.aposcale = aposcale
             mass = sims.get_sim_massmap(
-                IA=0.,
+                A_IA=0.,
                 zbin_combo=sims.zbin_combos[0],
                 LOS=sims.LOS_indices[0],
             )
@@ -638,29 +638,29 @@ class IAStLibrary(_StLibrary):
         self.fname = "SCOEF_IA{:.1f}_Cosmolfid_ZB{}.pt"
 
 
-    def get_savepath(self, IA: int | float, zbin_combo: tuple[int, ...], region: str="IA"):
+    def get_savepath(self, A_IA: int | float, zbin_combo: tuple[int, ...], region: str="IA"):
         if region != "IA":
             raise ValueError("Please set region to 'IA' for IAStLibrary.")
 
         if hasattr(self, "sims"):
             fname = self.fname.format(
-                IA, "u".join(str(zb) for zb in zbin_combo))
+                A_IA, "u".join(str(zb) for zb in zbin_combo))
         else:
             fname_patt = "*_IA{:.1f}_Cosmolfid_ZB{}.pt".format(
-                IA, "u".join(str(zb) for zb in zbin_combo))
+                A_IA, "u".join(str(zb) for zb in zbin_combo))
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
 
     def calc_sim_scoef(
-            self, IA: int | float, zbin_combo: tuple[int, ...]):
+            self, A_IA: int | float, zbin_combo: tuple[int, ...]):
         return super().calc_sim_scoef(
-            IA=IA, zbin_combo=zbin_combo, region="IA")
+            A_IA=A_IA, zbin_combo=zbin_combo, region="IA")
 
     def get_sim_scoef(
         self,
-        IA: int | float,
+        A_IA: int | float,
         zbin_combo: tuple[int, ...],
         LOS: int | Sequence[int] | None=None,
         j_start: int | None=None,
@@ -671,7 +671,7 @@ class IAStLibrary(_StLibrary):
         flatten: bool=True,
         return_type: str="dict",
     ):
-        st_paths = [self.get_savepath(IA, zbin_combo)]
+        st_paths = [self.get_savepath(A_IA, zbin_combo)]
 
         return super()._get_sim_scoef_from_paths(
             st_paths=st_paths,
@@ -686,9 +686,9 @@ class IAStLibrary(_StLibrary):
             return_type=return_type,
         )
 
-    def collect_scoef_for_IA(
+    def collect_scoef_for_A_IA(
         self,
-        IA_values: list[int | float],
+        A_IA_values: list[int | float],
         zbin_combos: list[tuple[int, ...]],
         j_start: int | None=None,
         j_end: int | None=None,
@@ -702,7 +702,7 @@ class IAStLibrary(_StLibrary):
         for IA_ind, IA in enumerate(IA_values):
             for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
                 scoef = self.get_sim_scoef(
-                    IA=IA,
+                    A_IA=A_IA,
                     zbin_combo=zbin_combo,
                     LOS=None,
                     j_start=j_start,
