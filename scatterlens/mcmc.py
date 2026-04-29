@@ -94,9 +94,6 @@ class MCMC:
         if not isinstance(params, np.ndarray):
             params = np.array(params)
 
-        if params.ndim == 1:
-            params = params.reshape(1, -1)
-
         pred = self.model.predict(params).squeeze()
         return (self.dv - pred).T @ self.inv_cov @ (self.dv - pred)
 
