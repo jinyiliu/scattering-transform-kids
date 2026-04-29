@@ -10,7 +10,7 @@ CONFIDENCE_LEVELS_2D = (0.393, 0.864)
 
 def plot_posterior_corner(
         samples: np.ndarray | list[np.ndarray],
-        color: str | list[str]="京绿",
+        color: str | list[str]="蔚蓝",
         same_contour_color: bool=False,
         fill: bool=False,
         contour_kwargs: dict | None=None,
