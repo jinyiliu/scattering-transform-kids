@@ -26,6 +26,7 @@ class Model:
         if IA_kwargs:
             self.IA_kwargs = IA_kwargs
             self.IA_poly_coefs = np.array(self._load_IA_poly_coefs())
+            self.IA_fid = self._get_IA_fid()
 
 
     def predict(self, params) -> np.ndarray:
@@ -49,9 +50,16 @@ class Model:
         """
         degree = self.IA_poly_coefs.shape[0] - 1
         X = np.vander(x=[A_IA], N=degree + 1, increasing=False)
-        IA_scaling = (X @ self.IA_poly_coefs).squeeze(0)
+        IA_scaling = (X @ self.IA_poly_coefs).squeeze(0) / self.IA_fid
         return IA_scaling
 
+
+    def _get_IA_fid(self):
+        A_IA = 0.
+        degree = self.IA_poly_coefs.shape[0] - 1
+        X = np.vander(x=[A_IA], N=degree + 1, increasing=False)
+        IA_fid = (X @ self.IA_poly_coefs).squeeze(0)
+        return IA_fid
 
 
     def _load_IA_poly_coefs(self) -> torch.Tensor:
