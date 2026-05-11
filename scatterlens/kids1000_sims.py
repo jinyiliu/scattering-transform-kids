@@ -218,7 +218,8 @@ class SLICS(KiDS1000):
 
 class IAMocks(KiDS1000):
     # IA mocks currently only have auto and cross-zbin combinations
-    KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
+    if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
+        KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
 
     _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/IAMocks/"
     simsname = "KiDS1000_IAMocks"
@@ -271,6 +272,61 @@ class IAMocks(KiDS1000):
     def cosmology_info():
         return CosmoSLICS.cosmology_info("fid")
 
+
+class BaryonMocks(KiDS1000):
+    # Baryon mocks currently only have auto and cross-zbin combinations
+    if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
+        KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
+
+    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/BaryonMocks/"
+    simsname = "KiDS1000_BaryonMocks"
+    simspath = "MRres140.64arcs_Bary{:s}_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
+    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{:d}R{:d}.SS2.816.Ekappa.npy"
+
+    b_bary_values = [0., 1.] # Baryon OFF and ON
+    LOS_indices = list(range(0, 10))
+
+    @staticmethod
+    def has_LOS(LOS: int) -> bool:
+        return 0 <= LOS <= 9
+
+    @staticmethod
+    def has_b_bary(b_bary: float) -> bool:
+        return b_bary in BaryonMocks.b_bary_values
+
+    @staticmethod
+    def get_sim_massmap(
+            b_bary: float,
+            zbin_combo: tuple[int, ...],
+            region: int,
+            LOS: int,
+    ) -> np.ndarray:
+        assert (
+            BaryonMocks.has_b_bary(b_bary)
+            and KiDS1000.has_zbin_combo(zbin_combo)
+            and KiDS1000.has_region(region)
+            and BaryonMocks.has_LOS(LOS)
+        ), "Validation failed for one or more inputs."
+
+        shapenoise = KiDS1000.get_shapenoise(zbin_combo)
+        zbcut = KiDS1000.get_ZBcut(zbin_combo)
+
+        simspath = BaryonMocks.simspath.format(
+            "ON" if b_bary == 1 else "OFF", shapenoise, zbcut)
+
+        massmap = np.load(
+            os.path.join(
+                BaryonMocks._data_path,
+                simspath,
+                BaryonMocks.mapfname.format(shapenoise, LOS, region),
+            )
+        )
+        return massmap
+        pass
+
+    @staticmethod
+    def cosmology_info():
+        return CosmoSLICS.cosmology_info("fid")
 
 
 def _read_cosmologies_info() -> pd.DataFrame:
