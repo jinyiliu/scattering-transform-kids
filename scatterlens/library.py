@@ -725,6 +725,47 @@ class IAStLibrary(_StLibrary):
         return scoef_tensor
 
 
+    @staticmethod
+    def fit_IA_polynomials(
+            scoef_tensor: torch.Tensor,
+            A_IA_values: list[float] | np.ndarray,
+            degree: int=2,
+            savedir: str | None=None,
+            fname: str="IA_poly_coefs.pt",
+    ):
+        """Fit polynomials to scattering transform coefficients as a function
+        of A_IA.
+
+        Args:
+            scoef_tensor: Scattering transform coefficients with shape
+                (n_A_IA, n_coefficients).
+            A_IA_values: The A_IA parameter values corresponding to each row of
+                scoef_tensor.
+            degree: Degree of the polynomial to fit. Default is 2 (quadratic).
+            savedir:
+            fname:
+
+        Returns:
+            Polynomial coefficients with shape (degree + 1, n_coefficients),
+        """
+        X = torch.vander(
+            torch.tensor(A_IA_values), N=degree + 1, increasing=False)
+        poly_coefs = torch.zeros(
+            degree + 1, scoef_tensor.shape[1], dtype=torch.float32)
+
+        for coef in range(scoef_tensor.shape[1]):
+            y = scoef_tensor[:, coef]
+            # Solve X * poly_coefs = y
+            solution = torch.linalg.lstsq(X, y.unsqueeze(1))
+            poly_coefs[:, coef] = solution.solution.squeeze()
+
+        if savedir:
+            torch.save(
+                obj=poly_coefs,
+                f=os.path.join(savedir, fname),
+            )
+
+
 
 class FilterLibrary:
     def __init__(
