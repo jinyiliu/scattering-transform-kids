@@ -766,6 +766,141 @@ class IAStLibrary(_StLibrary):
             )
 
 
+class BaryonStLibrary(_StLibrary):
+    def __init__(
+            self,
+            libdir: os.PathLike | str,
+            filterlib=None,
+            masklib=None,
+            sims=None,
+            padding: int=0,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
+            **St2Dkwargs):
+        super().__init__(
+            libdir=libdir,
+            filterlib=filterlib,
+            masklib=masklib,
+            sims=sims,
+            padding=padding,
+            mask_correction=mask_correction,
+            local_fsky_min=local_fsky_min,
+            **St2Dkwargs,
+        )
+        self.fname = "SCOEF_Bary{:s}_Cosmolfid_ZB{:s}_R{:d}.pt"
+
+
+    def get_savepath(
+            self,
+            b_bary: int | float,
+            zbin_combo: tuple[int, ...],
+            region: int,
+    ):
+        if hasattr(self, "sims"):
+            fname = self.fname.format(
+                "ON" if b_bary else "OFF",
+                "u".join(str(zb) for zb in zbin_combo),
+                region,
+            )
+        else:
+            fname_patt = "*_Bary{:s}_Cosmolfid_ZB{:s}_R{:d}.pt".format(
+                "ON" if b_bary else "OFF",
+                "u".join(str(zb) for zb in zbin_combo),
+                region,
+            )
+            fname = self.glob_in_libdir(fname_patt=fname_patt)
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
+
+    def calc_sim_scoef(
+            self, b_bary: int | float, zbin_combo: tuple[int, ...], region: int):
+        return super().calc_sim_scoef(
+            b_bary=b_bary, zbin_combo=zbin_combo, region=region)
+
+    def get_sim_scoef(
+            self,
+            b_bary: int | float,
+            zbin_combo: tuple[int, ...],
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+            region_weights: ArrayLike | str | None="auto",
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            flatten: bool=True,
+            return_type: str="dict",
+    ):
+        st_paths = []
+        if region:
+            if isinstance(region, int):
+                region = [region]
+            for _region in region:
+                st_paths.append(self.get_savepath(b_bary, zbin_combo, _region))
+        else:  # Use all regions
+            pathname = "*_Bary{:s}_Cosmolfid_ZB{:s}_*.pt".format(
+                "ON" if b_bary else "OFF",
+                "u".join(str(zb) for zb in zbin_combo),
+            )
+            st_paths += self.glob_in_libdir(fname_patt=pathname)
+
+        return super()._get_sim_scoef_from_paths(
+            st_paths=st_paths,
+            LOS=LOS,
+            region_weights=region_weights,
+            j_start=j_start,
+            j_end=j_end,
+            isotropic=isotropic,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+            flatten=flatten,
+            return_type=return_type,
+        )
+
+    def collect_scoef_for_b_bary(
+            self,
+            b_bary_values: list[int | float],
+            zbin_combos: list[tuple[int, ...]],
+            region: int | Sequence[int] | None=None,
+            j_start: int | None = None,
+            j_end: int | None = None,
+            isotropic: bool = True,
+            drop_S0: bool = True,
+            decorrelated_S2: bool = True,
+            savedir: str | None = None,
+            fname: str = "Baryon_scoef.pt",
+    ):
+        """Collect the scattering coefficients for different IA values."""
+        for b_bary_ind, b_bary in enumerate(b_bary_values):
+            for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
+                scoef = self.get_sim_scoef(
+                    b_bary=b_bary,
+                    zbin_combo=zbin_combo,
+                    region=region,
+                    region_weights="auto",
+                    LOS=None,
+                    j_start=j_start,
+                    j_end=j_end,
+                    drop_S0=drop_S0,
+                    isotropic=isotropic,
+                    decorrelated_S2=decorrelated_S2,
+                    flatten=True,
+                    return_type="sequence",
+                )
+                if "scoef_tensor" not in locals():
+                    scoef_tensor = torch.zeros(size=(
+                        len(b_bary_values),
+                        len(zbin_combos),
+                        len(scoef),
+                    ))
+                scoef_tensor[b_bary_ind, zbin_combo_ind, :] = scoef
+
+        scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
+        return scoef_tensor
+
+
 
 class FilterLibrary:
     def __init__(

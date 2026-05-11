@@ -312,7 +312,7 @@ class BaryonMocks(KiDS1000):
         zbcut = KiDS1000.get_ZBcut(zbin_combo)
 
         simspath = BaryonMocks.simspath.format(
-            "ON" if b_bary == 1 else "OFF", shapenoise, zbcut)
+            "ON" if b_bary else "OFF", shapenoise, zbcut)
 
         massmap = np.load(
             os.path.join(
