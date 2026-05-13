@@ -864,13 +864,13 @@ class BaryonStLibrary(_StLibrary):
             b_bary_values: list[int | float],
             zbin_combos: list[tuple[int, ...]],
             region: int | Sequence[int] | None=None,
-            j_start: int | None = None,
-            j_end: int | None = None,
-            isotropic: bool = True,
-            drop_S0: bool = True,
-            decorrelated_S2: bool = True,
-            savedir: str | None = None,
-            fname: str = "Baryon_scoef.pt",
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            savedir: str | None=None,
+            fname: str="Baryon_scoef.pt",
     ):
         """Collect the scattering coefficients for different IA values."""
         for b_bary_ind, b_bary in enumerate(b_bary_values):
@@ -900,6 +900,46 @@ class BaryonStLibrary(_StLibrary):
         scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
         return scoef_tensor
 
+
+    @staticmethod
+    def fit_baryon_polynomials(
+            scoef_tensor: torch.Tensor,
+            b_bary_values: list[float] | np.ndarray,
+            degree: int=1,
+            savedir: str | None=None,
+            fname: str="baryon_poly_coefs.pt",
+    ):
+        """Fit polynomials to scattering transform coefficients as a function
+        of b_bary.
+
+        Args:
+            scoef_tensor: Scattering transform coefficients with shape
+                (n_b_bary, n_coefficients).
+            b_bary_values: The b_bary parameter values corresponding to each row
+                of scoef_tensor.
+            degree: Degree of the polynomial to fit. Default is 1 (linear).
+            savedir:
+            fname:
+
+        Returns:
+            Polynomial coefficients with shape (degree + 1, n_coefficients),
+        """
+        X = torch.vander(
+            torch.tensor(b_bary_values), N=degree + 1, increasing=False)
+        poly_coefs = torch.zeros(
+            degree + 1, scoef_tensor.shape[1], dtype=torch.float32)
+
+        for coef in range(scoef_tensor.shape[1]):
+            y = scoef_tensor[:, coef]
+            # Solve X * poly_coefs = y
+            solution = torch.linalg.lstsq(X, y.unsqueeze(1))
+            poly_coefs[:, coef] = solution.solution.squeeze()
+
+        if savedir:
+            torch.save(
+                obj=poly_coefs,
+                f=os.path.join(savedir, fname),
+            )
 
 
 class FilterLibrary:
