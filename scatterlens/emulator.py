@@ -466,26 +466,59 @@ class PerFeatureEmulator(Emulator):
 
 
 def get_emulation_uncertainty_cov(
-        deviation_list: list[np.ndarray],
+        deviation_array: list[np.ndarray] | np.ndarray,
         exclude_indices: list[int] | None=None,
         diagonal_only: bool=False,
-) -> np.ndarray:
+        smoothing: bool=True,
+) -> torch.Tensor:
     """Estimate emulation uncertainty covariance matrix.
 
     Args:
-        deviation_list: List of deviation (pred - true) arrays from LOOCV.
+        deviation_array: List of deviation (pred - true) arrays from LOOCV.
         exclude_indices: List of indices to exclude from covariance
             estimation. This can be used to exclude outliers.
         diagonal_only: If True, returns only the covariance with only the
             diagonal elements. If False, returns the full covariance matrix.
+        smoothing: If True, smooths the covariance by taking the mode (peak)
+            of a Gaussian KDE fitted to the distribution of products for
+            each covariance element.
     """
+    if isinstance(deviation_array, list):
+        deviation_array = np.array(deviation_array)
+
     if exclude_indices is not None:
-        deviation_list = np.delete(deviation_list, exclude_indices, axis=0)
+        deviation_array = np.delete(deviation_array, exclude_indices, axis=0)
+
+    n_samples, dv_length = deviation_array.shape
+
+    if smoothing:
+        # FIXME: smoothing method not properly implemented yet
+        from scipy.stats import gaussian_kde
+
+        cov = np.zeros((dv_length, dv_length))
+
+        for i in range(dv_length):
+            for j in range(i, dv_length):
+                products = deviation_array[:, i] * deviation_array[:, j]
+
+                try:
+                    kde = gaussian_kde(products)
+                    x_range = products.max() - products.min()
+                    x_grid = np.linspace( # find the mode of the kde
+                        products.min() - 0.1 * x_range,
+                        products.max() + 0.1 * x_range,
+                        num=500,
+                    )
+                    y_grid = kde.evaluate(x_grid)
+                    smoothed_value = x_grid[np.argmax(y_grid)]
+                except (RuntimeError, TypeError):
+                    smoothed_value = np.median(products) # fall back to medians
+
+                cov[i, j] = smoothed_value
+                cov[j, i] = smoothed_value
+    else:
+        cov = np.cov(deviation_array, rowvar=False)
 
     if diagonal_only:
-        cov_diag = np.eye(len(deviation_list[0])) * np.mean(np.array(deviation_list)**2, axis=0)
-        return cov_diag
-
-    deviation_array = np.array(deviation_list)
-    cov = deviation_array.T @ deviation_array
-    return cov
+        return torch.from_numpy(np.diag(cov))
+    return torch.from_numpy(cov)
