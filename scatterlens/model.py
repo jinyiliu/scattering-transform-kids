@@ -18,6 +18,10 @@ class Model:
             emulator:
         """
         self.emulator = emulator
+        if emulator.bias is not None:
+            self.emu_bias = emulator.bias
+        else:
+            self.emu_bias = np.ones(emulator.n_features)
 
         if systematics:
             if not any(syst in ("IA", "baryon") for syst in systematics):
@@ -42,7 +46,7 @@ class Model:
 
 
     def predict(self, params) -> np.ndarray:
-        dv = self.emulator.predict(params[:4])
+        dv = self.emulator.predict(params[:4]) * self.emu_bias
         if self.systematics:
             for syst, param in zip(self.systematics, params[4:]):
                 match syst:

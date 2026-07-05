@@ -589,7 +589,7 @@ class CovStLibrary(_StLibrary):
             torch.save(cov, os.path.join(savedir, fname))
 
         if return_mean_dv:
-            scoef_tensor = torch.mean(scoef_tensor, dim=0)
+            scoef_tensor = np.array(torch.mean(scoef_tensor, dim=0))
             return cov, scoef_tensor
         else:
             return cov

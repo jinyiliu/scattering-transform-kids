@@ -30,6 +30,7 @@ class Emulator:
         self.regressor_args = regressor_args
         self.regressor = regressor_type(**regressor_args)
         self.is_fitted = False
+        self.bias = None
 
         self._training_set = {
             "input": np.array(training_set["input"]),
@@ -113,6 +114,23 @@ class Emulator:
         assert self.is_fitted
         calc = CalculusKit(self.predict, x0=X)
         return calc.jacobian()
+
+    def cache_emulator_bias(
+            self,
+            X_ref: np.ndarray,
+            Y_ref: np.ndarray,
+    ):
+        """Calculate and cache emulator bias.
+
+        The bias is defined as the ratio of predicted values to reference values:
+            bias = Y_ref / Y_pred
+
+        Args:
+            X_ref:
+            Y_ref:
+        """
+        Y_pred = self.predict(X_ref)
+        self.bias = Y_ref / Y_pred
 
 
 class S1S2Emulator(Emulator):
