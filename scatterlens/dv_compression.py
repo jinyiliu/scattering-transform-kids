@@ -2,8 +2,10 @@ import torch
 import warnings
 import numpy as np
 import pickle as pk
+from tqdm import tqdm
 
 from scatterlens.mcmc import Hartlap_factor, Sellentin_Heavens_factor
+from scatterlens.utils import _tqdm_style
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -167,7 +169,7 @@ def greedy(
                     _descriptors.append([zbin_combo, j1, j2])
 
 
-        for iteration in range(n_iterations):
+        for iteration in tqdm(range(n_iterations), desc="dv_elements", **_tqdm_style):
             FoM_ = []
             for idx in range(dv_length):
                 if idx in dv_indices:
