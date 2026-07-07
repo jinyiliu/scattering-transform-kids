@@ -11,17 +11,24 @@ class Model:
             systematics: list[str] | None=None,
             IA_kwargs: dict | None=None,
             baryon_kwargs: dict | None=None,
+            dv_indicies: list[int] | np.ndarray | None=None,
     ):
         """Forward model the statistics with systematic effects.
 
         Args:
             emulator:
+            systematics:
+            IA_kwargs:
+            baryon_kwargs:
+            dv_indicies:
         """
         self.emulator = emulator
         if emulator.bias is not None:
             self.emu_bias = emulator.bias
         else:
             self.emu_bias = np.ones(emulator.n_features)
+
+        self.dv_indicies = dv_indicies
 
         if systematics:
             if not any(syst in ("IA", "baryon") for syst in systematics):
@@ -56,6 +63,10 @@ class Model:
                         dv *= self.baryon(param)
                     case _:
                         pass
+
+        if self.dv_indicies is not None:
+            return dv[..., self.dv_indicies]
+
         return dv
 
 
