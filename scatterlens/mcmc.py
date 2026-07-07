@@ -19,7 +19,17 @@ class MCMC:
             param_priors: dict[str, list[str, list[float, float | np.ndarray]]]=None,
             n_simulations: int=217,
     ):
-        """Initialize the MCMC class."""
+        """Initialize the MCMC class.
+
+        Args:
+            model:
+            data_vector:
+            covariance_matrix:
+            likelihood_type:
+            param_priors:
+            n_simulations: Number of simulations used to estimate the
+                covariance matrix.
+        """
         if torch.is_tensor(data_vector):
             data_vector = data_vector.numpy()
 
@@ -81,7 +91,6 @@ class MCMC:
 
 
     def _Sellentin_Heavens_log_likelihood(self, params):
-        # TODO: double check the formula for the likelihood
         chi2 = self.chi2(params)
         posterior = -0.5 * self.n_simulations * np.log(1 + chi2 / (self.n_simulations - 1))
         posterior += self._log_prior(params)
