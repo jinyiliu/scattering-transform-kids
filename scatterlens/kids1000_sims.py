@@ -322,11 +322,106 @@ class BaryonMocks(KiDS1000):
             )
         )
         return massmap
-        pass
 
     @staticmethod
     def cosmology_info():
         return CosmoSLICS.cosmology_info("fid")
+
+
+class PhotoZMocks(KiDS1000):
+    if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
+        KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
+
+    dz_shifts = { # in unit of sigma_z
+        0:  0.0000,
+        2: -0.8980,
+        3: -0.2293,
+        4:  0.2623,
+        5:  0.8254,
+    }
+    dz_combos_1D = [(0,), (2,), (3,), (4,), (5,)]
+    dz_combos_2D = [
+        (0, 0),
+        (2, 2),
+        (2, 3),
+        (2, 4),
+        (2, 5),
+        (3, 2),
+        (3, 3),
+        (3, 4),
+        (3, 5),
+        (4, 2),
+        (4, 3),
+        (4, 4),
+        (4, 5),
+        (5, 2),
+        (5, 3),
+        (5, 4),
+        (5, 5),
+    ]
+    sigma_zs = [0.0096, 0.0114, 0.0116, 0.0084, 0.0097]
+    LOS_indices = [74,]
+
+    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/PhotoZMocks/"
+    simsname = "KiDS1000_PhotoZMocks"
+    simspath = "MRres140.64arcs_{:s}_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
+    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{:d}R{:d}.SS2.816.Ekappa.npy"
+
+    @staticmethod
+    def get_sim_massmap(
+            zbin_combo: tuple[int, ...],
+            dz_combo: tuple[int, ...],
+            region: int,
+            LOS: int,
+    ):
+        assert (
+                KiDS1000.has_zbin_combo(zbin_combo)
+                and KiDS1000.has_region(region)
+                and PhotoZMocks.has_LOS(LOS)
+                and PhotoZMocks.has_dz_combo(zbin_combo, dz_combo)
+        ), "Validation failed for one or more inputs."
+
+        shapenoise = KiDS1000.get_shapenoise(zbin_combo)
+        zbcut = KiDS1000.get_ZBcut(zbin_combo)
+        dz_name = PhotoZMocks.get_dz_name(dz_combo)
+
+        simspath = PhotoZMocks.simspath.format(
+            dz_name, shapenoise, zbcut)
+
+        massmap = np.load(
+            os.path.join(
+                PhotoZMocks._data_path,
+                simspath,
+                PhotoZMocks.mapfname.format(shapenoise, LOS, region),
+            )
+        )
+        return massmap
+
+    @staticmethod
+    def has_dz_combo(zbin_combo: tuple[int, ...], dz_combo: tuple[int, ...]) -> bool:
+        if len(zbin_combo) == 1:
+            return dz_combo in PhotoZMocks.dz_combos_1D
+        else:
+            return dz_combo in PhotoZMocks.dz_combos_2D
+
+    @staticmethod
+    def has_LOS(LOS: int) -> bool:
+        return LOS in PhotoZMocks.LOS_indices
+
+    @staticmethod
+    def cosmology_info():
+        # TODO: check it is CosmoSLICS fid or SLICS cosmology
+        return CosmoSLICS.cosmology_info("fid")
+
+    @staticmethod
+    def get_dz_name(dz_combo: tuple[int, ...]) -> str:
+        """Get the dz string for a given dz combination. This function is
+        only used when loading the simulation mass maps."""
+        if len(dz_combo) == 1 or dz_combo[0] == dz_combo[1]:
+            return f"dz{dz_combo[0]}"
+        else:
+            return f"dz{dz_combo[0]}_X_dz{dz_combo[1]}"
+
 
 
 def _read_cosmologies_info() -> pd.DataFrame:
