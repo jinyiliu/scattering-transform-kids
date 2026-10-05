@@ -776,7 +776,8 @@ class BaryonStLibrary(_StLibrary):
             padding: int=0,
             mask_correction: str="fsky",
             local_fsky_min: float=0.1,
-            **St2Dkwargs):
+            **St2Dkwargs,
+    ):
         super().__init__(
             libdir=libdir,
             filterlib=filterlib,
@@ -872,7 +873,7 @@ class BaryonStLibrary(_StLibrary):
             savedir: str | None=None,
             fname: str="Baryon_scoef.pt",
     ):
-        """Collect the scattering coefficients for different IA values."""
+        """Collect the scattering coefficients for BaryonON and BaryonOFF."""
         for b_bary_ind, b_bary in enumerate(b_bary_values):
             for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
                 scoef = self.get_sim_scoef(
@@ -894,7 +895,7 @@ class BaryonStLibrary(_StLibrary):
                         len(b_bary_values),
                         len(zbin_combos),
                         len(scoef),
-                    ))
+                    ), dtype=scoef.dtype)
                 scoef_tensor[b_bary_ind, zbin_combo_ind, :] = scoef
 
         scoef_tensor = scoef_tensor.flatten(start_dim=1, end_dim=2)
@@ -1024,7 +1025,7 @@ class MaskLibrary:
 
             pixel_area = (sims.pixel_length / 60) ** 2 # square degree
             df = pd.DataFrame.from_dict(
-                sims.region_MN, orient='index', columns=['M', 'N'])
+                sims.region_MN, orient="index", columns=["M", "N"])
             sky_area = []
 
             for region in sims.region_MN.keys():
