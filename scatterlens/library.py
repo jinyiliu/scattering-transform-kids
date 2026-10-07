@@ -943,6 +943,78 @@ class BaryonStLibrary(_StLibrary):
             )
 
 
+class PhotoZStLibrary(_StLibrary):
+    def __init__(
+            self,
+            libdir: os.PathLike | str,
+            filterlib=None,
+            masklib=None,
+            sims=None,
+            padding: int=0,
+            mask_correction: str="fsky",
+            local_fsky_min: float=0.1,
+            **St2Dkwargs,
+    ):
+        super().__init__(
+            libdir=libdir,
+            filterlib=filterlib,
+            masklib=masklib,
+            sims=sims,
+            padding=padding,
+            mask_correction=mask_correction,
+            local_fsky_min=local_fsky_min,
+            **St2Dkwargs,
+        )
+        self.fname = "SCOEF_{:s}_Cosmolfid_ZB{:s}_R{:d}.pt"
+
+    def get_savepath(
+            self,
+            zbin_combo: tuple[int, ...],
+            dz_combo: tuple[int, ...],
+            region: int,
+    ):
+        if hasattr(self, "sims"):
+            fname = self.fname.format(
+                self._get_dz_name(dz_combo),
+                "u".join(str(zb) for zb in zbin_combo),
+                region,
+            )
+        else:
+            fname_patt = "*_{:s}_Cosmolfid_ZB{:s}_R{:d}.pt".format(
+                self._get_dz_name(dz_combo),
+                "u".join(str(zb) for zb in zbin_combo),
+                region,
+            )
+            fname = self.glob_in_libdir(fname_patt=fname_patt)
+
+        savepath = os.path.join(self.libdir, fname)
+        return savepath
+
+    def calc_sim_scoef(
+            self,
+            zbin_combo: tuple[int, ...],
+            dz_combo: tuple[int, ...],
+            region: int,
+        ):
+        return super().calc_sim_scoef(
+            zbin_combo=zbin_combo, dz_combo=dz_combo, region=region)
+
+    @staticmethod
+    def _get_dz_name(dz_combo: tuple[int, ...]) -> str:
+        """Get the dz string for a given dz combination.
+
+        Notes:
+            This function is only used when loading the scattering coefficients.
+            This function differs from the PhotoZMocks.get_dz_name in
+            scatterlens.kids1000_sims module.
+        """
+        if len(dz_combo) == 1:
+            return f"dz{dz_combo[0]}"
+        else:
+            return f"dz{dz_combo[0]}_X_dz{dz_combo[1]}"
+
+
+
 class FilterLibrary:
     def __init__(
             self, libdir: os.PathLike | str,
