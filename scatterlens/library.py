@@ -999,6 +999,49 @@ class PhotoZStLibrary(_StLibrary):
         return super().calc_sim_scoef(
             zbin_combo=zbin_combo, dz_combo=dz_combo, region=region)
 
+    def get_sim_scoef(
+            self,
+            zbin_combo: tuple[int, ...],
+            dz_combo: tuple[int, ...],
+            region: int | Sequence[int] | None=None,
+            LOS: int | Sequence[int] | None=None,
+            region_weights: ArrayLike | str | None="auto",
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            flatten: bool=True,
+            return_type: str="dict",
+    ):
+        """Return the scattering coefficients for the given dz and zbin
+        combination, averaging over the regions and LOS if given."""
+        st_paths = []
+        if region:
+            if isinstance(region, int):
+                region = [region]
+            for _region in region:
+                st_paths.append(self.get_savepath(zbin_combo, dz_combo, _region))
+        else:  # Use all regions
+            pathname = "*_{:s}_Cosmolfid_ZB{:s}_*.pt".format(
+                self._get_dz_name(dz_combo),
+                "u".join(str(zb) for zb in zbin_combo),
+            )
+            st_paths += self.glob_in_libdir(fname_patt=pathname)
+
+        return super()._get_sim_scoef_from_paths(
+            st_paths=st_paths,
+            LOS=LOS,
+            region_weights=region_weights,
+            j_start=j_start,
+            j_end=j_end,
+            isotropic=isotropic,
+            drop_S0=drop_S0,
+            decorrelated_S2=decorrelated_S2,
+            flatten=flatten,
+            return_type=return_type,
+        )
+
     @staticmethod
     def _get_dz_name(dz_combo: tuple[int, ...]) -> str:
         """Get the dz string for a given dz combination.
