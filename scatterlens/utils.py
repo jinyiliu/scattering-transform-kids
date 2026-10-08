@@ -22,6 +22,7 @@ def run_mp_scattering(
         covstlib=None,
         iastlib=None,
         barystlib=None,
+        photozstlib=None,
         processes: int=1,
 ):
     """Function to run the scatter calculation using multiprocessing.
@@ -31,10 +32,11 @@ def run_mp_scattering(
         covstlib: Instance of scatterlens.library.CovstLibrary.
         iastlib: Instance of scatterlens.library.IAStLibrary.
         barystlib: Instance of scatterlens.library.BaryonStLibrary.
+        photozstlib: Instance of scatterlens.library.PhotoZStLibrary.
         processes: Number of processes to use.
     """
-    if not (cosmolstlib or covstlib or iastlib or barystlib):
-        raise ValueError("Must specify at least one cosmolstlib or covstlib")
+    if not (cosmolstlib or covstlib or iastlib or barystlib or photozstlib):
+        raise ValueError("Must specify at least one stlib.")
 
     args_list = []
     if cosmolstlib:
@@ -70,6 +72,18 @@ def run_mp_scattering(
             for region in barystlib.sims.region_indices
         ]
         args_list += bary_args_list
+
+    if photozstlib:
+        photoz_args_list = [
+            (photozstlib, zbin_combo, dz_combo, region)
+            for zbin_combo in photozstlib.sims.zbin_combos
+            for dz_combo in (
+                photozstlib.sims.dz_combos_1D if len(zbin_combo) == 1
+                else photozstlib.sims.dz_combos_2D
+            )
+            for region in photozstlib.sims.region_indices
+        ]
+        args_list += photoz_args_list
 
     try:
         multiprocessing.set_start_method("spawn")
