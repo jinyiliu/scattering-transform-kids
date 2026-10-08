@@ -1042,6 +1042,59 @@ class PhotoZStLibrary(_StLibrary):
             return_type=return_type,
         )
 
+    def collect_scoef(
+            self,
+            zbin_combos: list[tuple[int, ...]],
+            region: int | Sequence[int] | None=None,
+            j_start: int | None=None,
+            j_end: int | None=None,
+            isotropic: bool=True,
+            drop_S0: bool=True,
+            decorrelated_S2: bool=True,
+            savedir: str | None=None,
+            fname: str="PhotoZ_scoef_dict.pkl",
+    ) -> dict:
+        """Collect the scattering coefficients."""
+        if self.sims is None:
+            raise RuntimeError(
+                "PhotoZStLibrary.sims must be provided when using this function."
+            )
+        scoef_dict = {}
+        for zbin_combo in zbin_combos:
+            if len(zbin_combo) == 1:
+                dz_combos = self.sims.dz_combos_1D
+            else:
+                dz_combos = self.sims.dz_combos_2D
+
+            for i, dz_combo in enumerate(dz_combos):
+                scoef = self.get_sim_scoef(
+                    zbin_combo=zbin_combo,
+                    dz_combo=dz_combo,
+                    region=region,
+                    region_weights="auto",
+                    LOS=None,
+                    j_start=j_start,
+                    j_end=j_end,
+                    drop_S0=drop_S0,
+                    isotropic=isotropic,
+                    decorrelated_S2=decorrelated_S2,
+                    flatten=True,
+                    return_type="sequence",
+                )
+                if zbin_combo not in scoef_dict:
+                    # TODO: use torch.Tensor or numpy.array
+                    scoef_dict[zbin_combo] = torch.zeros(
+                        size=(len(dz_combos), len(scoef)), dtype=scoef.dtype)
+                scoef_dict[zbin_combo][i, :] = scoef
+
+        if savedir:
+            import pickle
+            with open(os.path.join(savedir, fname), "wb") as f:
+                pickle.dump(scoef_dict, f)
+
+        return scoef_dict
+
+
     @staticmethod
     def _get_dz_name(dz_combo: tuple[int, ...]) -> str:
         """Get the dz string for a given dz combination.
