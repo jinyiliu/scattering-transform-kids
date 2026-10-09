@@ -332,16 +332,14 @@ class PhotoZMocks(KiDS1000):
     if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
         KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
 
-    dz_shifts = { # in unit of sigma_z
-        0:  0.0000,
-        2: -0.8980,
+    dz_shifts = {  # in unit of sigma_z
+        5: -0.8980,
         3: -0.2293,
         4:  0.2623,
-        5:  0.8254,
+        2:  0.8254,
     }
-    dz_combos_1D = [(0,), (2,), (3,), (4,), (5,)]
+    dz_combos_1D = [(2,), (3,), (4,), (5,)]
     dz_combos_2D = [
-        (0, 0),
         (2, 2),
         (2, 3),
         (2, 4),
