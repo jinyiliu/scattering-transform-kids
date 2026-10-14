@@ -105,10 +105,10 @@ class CosmoSLICS(KiDS1000):
     cosmol_indices = list(range(25)) + [-1]
     LOS_indices = list(range(1, 51))
     param_ranges = {
-        "Omega_m": [0.1, 0.55],
-        "S_8": [0.6, 0.9],
-        "h": [0.6, 0.9],
-        "w_0": [-2.0, 0.5],
+        "Omega_m": [0.10, 0.55],
+        "S_8": [0.60, 0.90],
+        "h": [0.60, 0.82],
+        "w_0": [-2.00, -0.50],
     }
     param_texlabels = [r"$\Omega_\mathrm{m}$", r"$S_8$", r"$h$", r"$w_0$"]
 
