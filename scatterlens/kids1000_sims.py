@@ -181,28 +181,31 @@ class CosmoSLICS(KiDS1000):
 
 class SLICS(KiDS1000):
     simsname = "KiDS1000_SLICS"
-    simspath = "MRres140.64arcs_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}"
-    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}.SS2.816.Ekappa.npy"
+    simspath = "MRres140.64arcs_100Sqdeg_SNCycle_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}"
+    mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}n{:d}.SS2.816.Ekappa.npy"
+    NOISE_indices = list(range(10))
     LOS_indices = list(range(74, 293))
     LOS_indices.pop(198 - 74) # LOS198 & LOS199 are corrupted
     LOS_indices.pop(198 - 74)
 
     @staticmethod
-    def get_sim_massmap(zbin_combo: tuple[int, ...], region: int, LOS: int) -> NDArray:
+    def get_sim_massmap(
+            zbin_combo: tuple[int, ...], region: int, LOS: int, NOISE: int) -> NDArray:
         assert (
             KiDS1000.has_region(region)
             and KiDS1000.has_zbin_combo(zbin_combo)
             and SLICS.has_LOS(LOS)
+            and SLICS.has_NOISE(NOISE)
         ), "Validation failed for one or more inputs."
         shapenoise = KiDS1000.get_shapenoise(zbin_combo)
         zbcut = KiDS1000.get_ZBcut(zbin_combo)
 
-        simspath = SLICS.simspath.format(shapenoise, zbcut)
+        simspath = SLICS.simspath.format(zbcut)
 
         massmap = np.load(
             os.path.join(
                 _data_path, simspath,
-                SLICS.mapfname.format(shapenoise, LOS, region),
+                SLICS.mapfname.format(shapenoise, LOS, region, NOISE),
             )
         )
         return massmap
@@ -210,6 +213,10 @@ class SLICS(KiDS1000):
     @staticmethod
     def has_LOS(LOS: int) -> bool:
         return 74 <= LOS <= 292 and not LOS in (198, 199)
+
+    @staticmethod
+    def has_NOISE(NOISE: int):
+        return NOISE in SLICS.NOISE_indices
 
     @staticmethod
     def cosmology_info():
