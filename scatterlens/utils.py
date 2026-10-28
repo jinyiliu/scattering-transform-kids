@@ -50,8 +50,9 @@ def run_mp_scattering(
 
     if covstlib:
         cov_args_list = [
-            (covstlib, zbin_combo, region)
+            (covstlib, zbin_combo, n, region)
             for zbin_combo in covstlib.sims.zbin_combos
+            for n in covstlib.sims.noise_indices
             for region in covstlib.sims.region_indices
         ]
         args_list += cov_args_list
