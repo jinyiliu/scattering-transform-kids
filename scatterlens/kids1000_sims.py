@@ -5,7 +5,8 @@ from numpy.typing import NDArray
 
 from scatterlens.utils import create_zbin_combos
 
-_data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/MassMaps4JHD/"
+DATA_ROOT = "/net/alblas/data2/jliu/stkids_data"
+_data_path = DATA_ROOT + "/KiDS-1000/MassMaps4JHD/"
 
 class KiDS1000:
     smoothing_scale = 6.6
@@ -188,8 +189,8 @@ class SLICS(KiDS1000):
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{}R{:d}n{:d}.SS2.816.Ekappa.npy"
     noise_indices = list(range(10))
     LOS_indices = list(range(74, 293))
-    LOS_indices.pop(198 - 74) # LOS198 & LOS199 are corrupted
-    LOS_indices.pop(198 - 74)
+    LOS_indices.pop(198 - 293) # LOS198 & LOS199 are corrupted
+    LOS_indices.pop(199 - 293)
 
     @staticmethod
     def get_sim_massmap(
@@ -231,7 +232,7 @@ class IAMocks(KiDS1000):
     if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
         KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
 
-    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/IAMocks/"
+    _data_path = DATA_ROOT + "/KiDS-1000/IAMocks/"
     simsname = "KiDS1000_IAMocks"
     simspath = "MRres140.64arcs_IA{:.1f}_100Sqdeg_SN{:g}_NoMask_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = "SN{:g}_test.KiDS1000GpAM.LOS{:d}.SS2.816.Ekappa.npy"
@@ -288,7 +289,7 @@ class BaryonMocks(KiDS1000):
     if (1, 2, 3, 4, 5) in KiDS1000.zbin_combos:
         KiDS1000.zbin_combos.pop(KiDS1000.zbin_combos.index((1, 2, 3, 4, 5)))
 
-    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/BaryonMocks/"
+    _data_path = DATA_ROOT + "/KiDS-1000/BaryonMocks/"
     simsname = "KiDS1000_BaryonMocks"
     simspath = "MRres140.64arcs_Bary{:s}_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{:d}R{:d}.SS2.816.Ekappa.npy"
@@ -370,7 +371,7 @@ class PhotoZMocks(KiDS1000):
     sigma_zs = [0.0096, 0.0114, 0.0116, 0.0084, 0.0097]
     LOS_indices = [74,]
 
-    _data_path = "/data1/jliu/scattering-transform-kids/data/KiDS-1000/PhotoZMocks/"
+    _data_path = DATA_ROOT + "/KiDS-1000/PhotoZMocks/"
     simsname = "KiDS1000_PhotoZMocks"
     simspath = "MRres140.64arcs_{:s}_100Sqdeg_SN{:g}_Mosaic_KiDS1000GpAM_zKiDS1000_{:s}_Cosmolfid"
     mapfname = r"SN{:g}_Mosaic.KiDS1000GpAM.LOS{:d}R{:d}.SS2.816.Ekappa.npy"
