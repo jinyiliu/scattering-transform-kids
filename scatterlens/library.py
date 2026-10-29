@@ -1,4 +1,5 @@
 import os
+import re
 import warnings
 import torch
 import numpy as np
@@ -179,7 +180,7 @@ class _StLibrary:
         if region_weights:
             if region_weights == "auto":
                 assert hasattr(self, "masklib")
-                region = [int(st_path[-5:-3].lstrip("R")) for st_path in st_paths]
+                region = [int(re.search(r"_R(\d+)", st_path).group(1)) for st_path in st_paths]
                 region_weights = self.masklib.get_region_areas(region)
             else:
                 assert len(region_weights) == len(st_paths)
@@ -438,30 +439,34 @@ class CovStLibrary(_StLibrary):
             local_fsky_min=local_fsky_min,
             **St2Dkwargs,
         )
-        self.fname = "SCOEF_{}_ZB{}_R{}.pt"
+        self.fname = "SCOEF_{}_ZB{}_R{}_n{}.pt"
 
 
-    def get_savepath(self, zbin_combo: tuple[int, ...], region: int):
-        """Return the savepath according to the given region and zbin combination."""
+    def get_savepath(self, zbin_combo: tuple[int, ...], region: int, n: int):
+        """Return the savepath according to the given region, noise cycle and
+        zbin combination."""
         if hasattr(self, "sims"):
             fname = self.fname.format(
-                self.sims.simsname, "u".join(str(zb) for zb in zbin_combo), region)
+                self.sims.simsname, "u".join(str(zb) for zb in zbin_combo),
+                region, n)
         else:
-            fname_patt = "*_ZB{}_R{}.pt".format(
-                "u".join(str(zb) for zb in zbin_combo), region)
+            fname_patt = "*_ZB{}_R{}_n{}.pt".format(
+                "u".join(str(zb) for zb in zbin_combo), region, n)
             fname = self.glob_in_libdir(fname_patt=fname_patt)
 
         savepath = os.path.join(self.libdir, fname)
         return savepath
 
 
-    def calc_sim_scoef(self, zbin_combo: tuple[int, ...], region: int):
-        return super().calc_sim_scoef(zbin_combo=zbin_combo, region=region)
+    def calc_sim_scoef(self, zbin_combo: tuple[int, ...], region: int, n: int):
+        return super().calc_sim_scoef(
+            zbin_combo=zbin_combo, region=region, n=n)
 
 
     def get_sim_scoef(
             self,
             zbin_combo: tuple[int, ...],
+            n: int,
             region: int | Sequence[int] | None=None,
             LOS: int | Sequence[int] | None=None,
             region_weights: ArrayLike | str | None="auto",
@@ -474,15 +479,16 @@ class CovStLibrary(_StLibrary):
             return_type: str="dict",
     ):
         """Return the scattering coefficients according to the given zbin
-        combination, averaging over the regions and LOS if given."""
+        combination and noise cycle, averaging over the regions and LOS if given."""
         st_paths = []
         if region:
             if isinstance(region, int):
                 region = [region]
             for _region in region:
-                st_paths.append(self.get_savepath(zbin_combo, _region))
+                st_paths.append(self.get_savepath(zbin_combo, _region, n))
         else: # Use all regions
-            pathname = "*_ZB{}_*.pt".format("u".join(str(zb) for zb in zbin_combo))
+            pathname = "*_ZB{}_*_n{}.pt".format(
+                "u".join(str(zb) for zb in zbin_combo), n)
             st_paths += self.glob_in_libdir(fname_patt=pathname)
 
         return super()._get_sim_scoef_from_paths(
@@ -512,32 +518,37 @@ class CovStLibrary(_StLibrary):
 
         Returns:
             A torch.Tensor object of shape:
-                (n_LOS, n_zbin_combo * n_scoef_per_zbin_combo).
+                (n_cycles * n_LOS, n_zbin_combo * n_scoef_per_zbin_combo).
         """
-        for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
-            for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
-                scoef = self.get_sim_scoef(
-                    zbin_combo=zbin_combo,
-                    region=region,
-                    region_weights="auto",
-                    LOS=LOS,
-                    j_start=j_start,
-                    j_end=j_end,
-                    drop_S0=drop_S0,
-                    isotropic=True,
-                    flatten=True,
-                    return_type="sequence",
-                    decorrelated_S2=decorrelated_S2,
-                )
-                if "scoef_tensor" not in locals():
-                    scoef_tensor = torch.zeros(size=(
-                            len(self.sims.LOS_indices),
-                            len(zbin_combos),
-                            len(scoef),
-                    ))
-                scoef_tensor[LOS_ind, zbin_combo_ind, :] = scoef
+        for n_ind, n in enumerate(self.sims.noise_indices):
+            for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
+                for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
+                    scoef = self.get_sim_scoef(
+                        zbin_combo=zbin_combo,
+                        n=n,
+                        region=region,
+                        region_weights="auto",
+                        LOS=LOS,
+                        j_start=j_start,
+                        j_end=j_end,
+                        drop_S0=drop_S0,
+                        isotropic=True,
+                        flatten=True,
+                        return_type="sequence",
+                        decorrelated_S2=decorrelated_S2,
+                    )
+                    if "scoef_tensor" not in locals():
+                        scoef_tensor = torch.zeros(size=(
+                                len(self.sims.noise_indices),
+                                len(self.sims.LOS_indices),
+                                len(zbin_combos),
+                                len(scoef),
+                        ), dtype=scoef.dtype)
+                    scoef_tensor[n_ind, LOS_ind, zbin_combo_ind, :] = scoef
 
-        return scoef_tensor.flatten(start_dim=1, end_dim=2)
+        scoef_tensor = scoef_tensor.flatten(start_dim=2, end_dim=3)
+        scoef_tensor = scoef_tensor.flatten(start_dim=0, end_dim=1)
+        return scoef_tensor
 
 
     def get_cov(
@@ -582,8 +593,8 @@ class CovStLibrary(_StLibrary):
         cov = torch.cov(scoef_tensor.t())
         if Hartlap_correction:
             n_dv = scoef_tensor.shape[1]
-            n_LOS = scoef_tensor.shape[0]
-            cov *= Hartlap_factor(n_LOS, n_dv)
+            n_real = scoef_tensor.shape[0]
+            cov *= Hartlap_factor(n_real, n_dv)
 
         if savedir:
             torch.save(cov, os.path.join(savedir, fname))
