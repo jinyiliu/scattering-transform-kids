@@ -26,14 +26,22 @@ def plot_Cov(
 
     if zbin_combo_type_labels is not None:
         # Separate zbin_combos into auto, pairs, and 3+ bins
-        zbin_combo_type_counts = np.array([
-            0,
+        zbin_combo_type_counts = [
             len([combo for combo in zbin_combos if len(combo) == 1]),
             len([combo for combo in zbin_combos if len(combo) == 2]),
             len([combo for combo in zbin_combos if len(combo) > 2]),
-        ])
+        ]
+        # Drop empty categories (and their labels) so auto+cross-only works.
+        labels = [
+            lab for lab, n in zip(zbin_combo_type_labels, zbin_combo_type_counts)
+            if n > 0
+        ]
+        zbin_combo_type_counts = [n for n in zbin_combo_type_counts if n > 0]
+
         dv_length_per_zbin_combo = corr.shape[0] // len(zbin_combos)
-        separation_edges = np.cumsum(zbin_combo_type_counts * dv_length_per_zbin_combo)
+        separation_edges = np.cumsum(
+            [0] + [n * dv_length_per_zbin_combo for n in zbin_combo_type_counts]
+        )
 
         for x in separation_edges[1:-1]:
             ax.axvline(x=x, color="black", lw=0.7)
@@ -41,7 +49,7 @@ def plot_Cov(
 
         for x, s in zip(
                 (separation_edges[1:] + separation_edges[:-1]) / 2,
-                zbin_combo_type_labels,
+                labels,
         ):
             ax.text(x=x, y=corr.shape[1] * 1.05, s=s, ha="center", va="top")
 
