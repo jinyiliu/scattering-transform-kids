@@ -176,6 +176,12 @@ def mask_apodization(
         return _mask_apodization_flat(mask, lx, ly, aposcale_deg, apotype)
 
 
+def pseudo_logdet(C):
+    C = np.asarray(C, dtype=np.float64)
+    eigvals = np.linalg.eigvalsh((C + C.T) / 2)
+    eigvals = eigvals[eigvals > eigvals[-1] * 1.e-12]  # drop numerical zeros
+    return np.sum(np.log(eigvals))
+
 
 def FoM_Fisher_SLICS(
     emulator: Emulator,
