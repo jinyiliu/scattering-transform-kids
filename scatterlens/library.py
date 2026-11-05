@@ -508,6 +508,7 @@ class CovStLibrary(_StLibrary):
             self,
             zbin_combos: list[tuple[int, ...]],
             region: int | Sequence[int] | None=None,
+            noise_indices: Sequence[int] | None=None,
             j_start: int | None=None,
             j_end: int | None=None,
             drop_S0: bool=True,
@@ -520,7 +521,12 @@ class CovStLibrary(_StLibrary):
             A torch.Tensor object of shape:
                 (n_cycles * n_LOS, n_zbin_combo * n_scoef_per_zbin_combo).
         """
-        for n_ind, n in enumerate(self.sims.noise_indices):
+        if noise_indices is not None:
+            assert all(self.sims.has_noise(n) for n in noise_indices)
+        else:
+            noise_indices = self.sims.noise_indices
+
+        for n_ind, n in enumerate(noise_indices):
             for zbin_combo_ind, zbin_combo in enumerate(zbin_combos):
                 for LOS_ind, LOS in enumerate(self.sims.LOS_indices):
                     scoef = self.get_sim_scoef(
@@ -539,7 +545,7 @@ class CovStLibrary(_StLibrary):
                     )
                     if "scoef_tensor" not in locals():
                         scoef_tensor = torch.zeros(size=(
-                                len(self.sims.noise_indices),
+                                len(noise_indices),
                                 len(self.sims.LOS_indices),
                                 len(zbin_combos),
                                 len(scoef),
@@ -557,6 +563,7 @@ class CovStLibrary(_StLibrary):
             j_start: int | None=None,
             j_end: int | None=None,
             region: int | Sequence[int] | None=None,
+            noise_indices: Sequence[int] | None=None,
             drop_S0: bool=True,
             decorrelated_S2: bool=True,
             Hartlap_correction: bool=False,
@@ -571,6 +578,7 @@ class CovStLibrary(_StLibrary):
             j_start:
             j_end:
             region:
+            noise_indices:
             drop_S0:
             decorrelated_S2:
             Hartlap_correction: If True, will apply the Hartlap correction to
@@ -585,6 +593,7 @@ class CovStLibrary(_StLibrary):
         scoef_tensor = self.collect_flattened_scoef(
             zbin_combos=zbin_combos if zbin_combos else self.sims.zbin_combos,
             region=region,
+            noise_indices=noise_indices,
             j_start=j_start,
             j_end=j_end,
             drop_S0=drop_S0,
