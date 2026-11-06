@@ -44,7 +44,7 @@ def create_zbin_combo_subplots(
     fig, axs = plt.subplots(
         nrows=n_rows,
         ncols=n_cols,
-        figsize=cm2inch(onecol_wth, n_rows * (onecol_wth / n_cols) * 0.9),
+        figsize=cm2inch(median_wth, n_rows * (median_wth / n_cols) * 0.9),
         sharex=True,
         sharey=True,
     )
@@ -61,19 +61,20 @@ def create_zbin_combo_subplots(
                 x=0.97, y=0.85,
                 s=zbin_combo_label(zbin_combos[i]),
                 ha="right",
-                fontsize=6,
+                fontsize=8.,
+                fontfamily="Calibri",
                 transform=ax.transAxes,
             )
             if J is not None:
-                ax.axvline(x=J, color="grey", lw=1.0, ls="solid", alpha=0.5, zorder=10)
+                ax.axvline(x=J, color="鹤灰", lw=1.0, ls="solid", alpha=1., zorder=10)
                 if i < n_cols: # first row
-                    ax.set_title(label=r"$s_1\ \ \ \ \ \ \ \ s_2$",
-                                 x=0.13, loc="left", color="grey", fontsize=8)
+                    ax.set_title(label=r"$\ \ s_1\ \ \ \ \ \ \ \ \ \ \ s_2$",
+                                 x=0.13, loc="left", color="鹤灰", fontsize=10)
         else:
             ax.axis("off")
 
     fig.text(
-        x=0.02, y=0.5, s=ylabel,
+        x=0.02, y=0.5, s=ylabel, fontsize=11,
         va="center", rotation="vertical",
     )
 

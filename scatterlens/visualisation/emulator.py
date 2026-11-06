@@ -11,7 +11,7 @@ def plot_LOOCV(
         cmap: str="viridis",
         n_cols: int=4,
         J: int | None=None,
-        ylabel: str=r"$\mathbf{d}_\mathrm{LOOCV} / \mathbf{d}_\mathrm{True}$",
+        ylabel: str=r"$\mathbf{d}_\mathrm{pred} / \mathbf{d}_\mathrm{true}$",
         savedir: str | None=None,
         fname: str="LOOCV.pdf",
         return_fig_ax: bool=False,
@@ -84,8 +84,8 @@ def plot_LOOCV(
                             dv_length_per_combo * i: dv_length_per_combo * (i + 1)
                         ],
                         linestyle="solid",
-                        lw=0.9,
-                        color="丹罽",
+                        lw=2.0,
+                        color="胆矾",
                         alpha=1.0,
                         zorder=1,
                     )
@@ -95,11 +95,15 @@ def plot_LOOCV(
                             dv_length_per_combo * i: dv_length_per_combo * (i + 1)
                         ],
                         linestyle="solid",
-                        lw=0.5,
-                        color="法翠",
-                        alpha=0.5,
+                        lw=0.9,
+                        color="桂黄",
+                        alpha=0.7,
                         zorder=0,
                     )
+
+            ax.set_ylim(bottom=0.95, top=1.05)
+            ax.set_yticks([0.97, 1.00, 1.03])
+            ax.tick_params(axis="y", labelsize=8.)
 
             if std is not None:
                 ax.fill_between(
@@ -110,7 +114,7 @@ def plot_LOOCV(
                     y2=1 + std[
                         dv_length_per_combo * i: dv_length_per_combo * (i + 1)
                     ],
-                    color="荻色",
+                    color="卵白",
                     alpha=1.0,
                     zorder=-1,
                 )
