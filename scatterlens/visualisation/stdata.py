@@ -1,4 +1,7 @@
+import seaborn as sns
+
 from scatterlens.visualisation.utils import *
+from scatterlens.kids1000_sims import IAMocks
 
 def plot_Cov(
         cov: torch.Tensor,
@@ -187,3 +190,118 @@ def plot_St_coefs_vs_param(
 
     if return_fig_ax:
         return fig, axs
+
+def plot_IA_poly_fit(
+        j1j2_indices: list[tuple[int, int | None]],
+        zbin_combos: list[tuple[int, ...]],
+        IA_poly_coefs: str | torch.Tensor,
+        IA_scoef_tensor: torch.Tensor,
+        markers: list[str] | None=None,
+        savedir: str | None=None,
+        fname: str="IA_poly_fit.pdf",
+        return_fig_ax: bool=False,
+):
+    A_IA_values = np.array(IAMocks.A_IA_values)
+    nrows = len(j1j2_indices)
+
+    _n_scoef_per_zb = IA_scoef_tensor.shape[1] // len(IAMocks.zbin_combos)
+    J = int((np.sqrt(8. * _n_scoef_per_zb + 1) - 1) / 2)
+    _S2_pairs = [(j1, j2) for j1 in range(J) for j2 in range(j1 + 1, J)]
+    coef_pos = lambda j1, j2: j1 if j2 is None else J + _S2_pairs.index((j1, j2))
+    zb_pos = lambda zb_combo: IAMocks.zbin_combos.index(zb_combo) * _n_scoef_per_zb
+
+    if isinstance(IA_poly_coefs, str):
+        IA_poly_coefs = torch.load(IA_poly_coefs, weights_only=True)
+
+    if isinstance(IA_poly_coefs, torch.Tensor):
+        poly = np.array(IA_poly_coefs)
+        degree = poly.shape[0] - 1
+    else:
+        poly = None
+
+    fig, axes = plt.subplots(
+        ncols=1,
+        nrows=nrows,
+        figsize=cm2inch(onecol_wth, onecol_wth * 0.6 * nrows),
+        sharex=True,
+    )
+    fig.subplots_adjust(hspace=0.05)
+    if nrows == 1:
+        axes = [axes]
+
+    A_IA_grid = np.linspace(start=-7., stop=7., num=200)
+
+    for p, (ax, (j1, j2)) in enumerate(zip(axes, j1j2_indices)):
+        ylabel = j1j2_label((j1, j2))
+        y_top = 0.
+        y_bottom = np.inf
+        for zbin_combo, m in zip(zbin_combos, markers):
+            line_label = zbin_combo_label(zbin_combo)
+            _idx = zb_pos(zbin_combo) + coef_pos(j1, j2)
+            y_meas = np.array(IA_scoef_tensor)[:, _idx]
+            y_fit = np.vander(A_IA_grid, degree + 1, increasing=False) @ poly[:, _idx]
+
+            c_meas = "朱柿"
+            c_fit = sns.light_palette("油紫", n_colors=6)[1]
+            y_top = max(y_fit) if max(y_fit) > y_top else y_top
+            y_bottom = min(y_fit) if min(y_fit) < y_bottom else y_bottom
+            y_range = y_top - y_bottom
+
+            ax.plot(
+                A_IA_values, y_meas,
+                marker=m,
+                linestyle="none",
+                markersize=3.5,
+                markerfacecolor=c_meas if len(zbin_combo) == 1 else "none",
+                markeredgecolor="青骊",
+                markeredgewidth=0.6,
+                label=line_label if p == 0 else None,
+                zorder=1,
+            )
+            ax.plot(
+                A_IA_grid, y_fit,
+                color=c_fit,
+                linewidth=2.5,
+                zorder=0,
+            )
+
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(ticks=[-6, -4, -2, 0, 2, 4, 6])
+        ax.set_xlim(left=-7.8, right=7.8)
+        ax.set_ylim(
+            top=y_top + y_range * 0.13,
+            bottom=y_bottom - y_range * 0.13,
+        )
+
+        if p == 0:
+            ax.legend(
+                loc="lower center",
+                handletextpad=0.3,
+                bbox_to_anchor=(0.5, 1.0),
+                ncols=5,
+                frameon=False,
+                edgecolor="云母",
+                facecolor="none",
+                fancybox=True,
+                prop={"family": "Calibri", "size": 7},
+            )
+
+        if p == nrows - 1:
+            ax.set_xlabel(r"$A_\mathrm{IA}$")
+
+
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
+    if return_fig_ax:
+        return fig, axes
+
+
+def j1j2_label(j1j2_index: tuple[int, int | None]) -> str:
+    j1, j2 = j1j2_index
+    if j2 is None:
+        return rf"$s_1^{{\, j_1={j1}}}$"
+    return rf"$s_2^{{\,j_1={j1},\,j_2={j2}}} \,\left/\, s_1^{{\,j_1={j1}}}\right.$"
