@@ -222,7 +222,7 @@ def plot_IA_poly_fit(
     fig, axes = plt.subplots(
         ncols=1,
         nrows=nrows,
-        figsize=cm2inch(onecol_wth, onecol_wth * 0.6 * nrows),
+        figsize=cm2inch(onecol_wth, onecol_wth * 0.65 * nrows),
         sharex=True,
     )
     fig.subplots_adjust(hspace=0.05)
@@ -241,6 +241,9 @@ def plot_IA_poly_fit(
             y_meas = np.array(IA_scoef_tensor)[:, _idx]
             y_fit = np.vander(A_IA_grid, degree + 1, increasing=False) @ poly[:, _idx]
 
+            y_meas *= 1 if j2 else 100
+            y_fit *= 1 if j2 else 100
+
             c_meas = "朱柿"
             c_fit = sns.light_palette("油紫", n_colors=6)[1]
             y_top = max(y_fit) if max(y_fit) > y_top else y_top
@@ -251,7 +254,7 @@ def plot_IA_poly_fit(
                 A_IA_values, y_meas,
                 marker=m,
                 linestyle="none",
-                markersize=3.5,
+                markersize=4.5,
                 markerfacecolor=c_meas if len(zbin_combo) == 1 else "none",
                 markeredgecolor="青骊",
                 markeredgewidth=0.6,
@@ -267,7 +270,7 @@ def plot_IA_poly_fit(
 
         ax.set_ylabel(ylabel)
         ax.set_xticks(ticks=[-6, -4, -2, 0, 2, 4, 6])
-        ax.set_xlim(left=-7.8, right=7.8)
+        ax.set_xlim(left=-7.5, right=7.5)
         ax.set_ylim(
             top=y_top + y_range * 0.13,
             bottom=y_bottom - y_range * 0.13,
@@ -275,15 +278,16 @@ def plot_IA_poly_fit(
 
         if p == 0:
             ax.legend(
-                loc="lower center",
-                handletextpad=0.3,
-                bbox_to_anchor=(0.5, 1.0),
+                loc="lower left",
+                handletextpad=0.,
+                bbox_to_anchor=(-0.03, 0.97),
                 ncols=5,
+                columnspacing=1.2,
                 frameon=False,
                 edgecolor="云母",
                 facecolor="none",
                 fancybox=True,
-                prop={"family": "Calibri", "size": 7},
+                prop={"family": "Calibri", "size": 8},
             )
 
         if p == nrows - 1:
@@ -303,5 +307,5 @@ def plot_IA_poly_fit(
 def j1j2_label(j1j2_index: tuple[int, int | None]) -> str:
     j1, j2 = j1j2_index
     if j2 is None:
-        return rf"$s_1^{{\, j_1={j1}}}$"
+        return rf"$10^2\,s_1^{{\, j_1={j1}}}$"
     return rf"$s_2^{{\,j_1={j1},\,j_2={j2}}} \,\left/\, s_1^{{\,j_1={j1}}}\right.$"
