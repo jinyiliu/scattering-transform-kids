@@ -327,11 +327,11 @@ def plot_IA_St_coefs(
     if isinstance(IA_poly_coefs, str):
         IA_poly_coefs = torch.load(IA_poly_coefs, weights_only=True)
 
-    poly = np.array(IA_poly_coefs, dtype=float)               # (degree + 1, n_coef)
+    poly = np.array(IA_poly_coefs, dtype=float)
     degree = poly.shape[0] - 1
-    X = np.vander(A_IA_values, degree + 1, increasing=False)  # (n_A_IA, degree + 1)
-    model = X @ poly                                          # (n_A_IA, n_coef)
-    model /= model[6]
+    X = np.vander(A_IA_values, degree + 1, increasing=False)
+    model = X @ poly
+    model /= model[np.argmin(np.abs(A_IA_values))]
 
     fig, axs, _n_scoef_per_zb = create_zbin_combo_subplots(
         dv_length=model.shape[1],
