@@ -309,3 +309,63 @@ def j1j2_label(j1j2_index: tuple[int, int | None]) -> str:
     if j2 is None:
         return rf"$10^2\,s_1^{{\, j_1={j1}}}$"
     return rf"$s_2^{{\,j_1={j1},\,j_2={j2}}} \,\left/\, s_1^{{\,j_1={j1}}}\right.$"
+
+
+def plot_IA_St_coefs(
+        IA_poly_coefs: str | torch.Tensor,
+        zbin_combos: list[tuple[int, ...]],
+        cmap: str="cool",
+        n_cols: int=4,
+        J: int | None=None,
+        ylabel: str=r"$s_{1/2}$",
+        savedir: str | None=None,
+        fname: str="IA_St_coefs.pdf",
+):
+    A_IA_values = np.linspace(-5., 5., num=100)
+    A_IA_range = (A_IA_values.min(), A_IA_values.max())
+
+    if isinstance(IA_poly_coefs, str):
+        IA_poly_coefs = torch.load(IA_poly_coefs, weights_only=True)
+
+    poly = np.array(IA_poly_coefs, dtype=float)               # (degree + 1, n_coef)
+    degree = poly.shape[0] - 1
+    X = np.vander(A_IA_values, degree + 1, increasing=False)  # (n_A_IA, degree + 1)
+    model = X @ poly                                          # (n_A_IA, n_coef)
+    model /= model[6]
+
+    fig, axs, _n_scoef_per_zb = create_zbin_combo_subplots(
+        dv_length=model.shape[1],
+        zbin_combos=zbin_combos,
+        n_cols=n_cols,
+        ylabel=ylabel,
+        J=J,
+    )
+
+    sm, colormap = get_colormap(cmap, A_IA_range)
+    add_shared_colorbar_to_figure(
+        fig=fig,
+        axs=axs,
+        sm=sm,
+        param_range=A_IA_range,
+        param_texlabel=r"$A_\mathrm{IA}$",
+    )
+
+    for i, ax in enumerate(axs):
+        for IA_idx, A_IA in enumerate(A_IA_values):
+            ax.plot(
+                model[IA_idx, _n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
+                color=colormap(A_IA),
+                zorder=0,
+                linewidth=0.5,
+                alpha=0.5,
+            )
+
+        # ax.set_ylim(bottom=0.95, top=1.05)
+        # ax.set_yticks([0.97, 1.00, 1.03])
+        ax.tick_params(axis="y", labelsize=8.)
+
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
