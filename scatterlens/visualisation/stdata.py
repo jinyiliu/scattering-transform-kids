@@ -400,3 +400,69 @@ def plot_IA_St_coefs(
             os.path.join(savedir, fname),
             bbox_inches="tight",
         )
+
+
+def plot_PhotoZ_St_coefs(
+        scoef_dict: dict[tuple[int, ...], torch.Tensor | np.ndarray],
+        zbin_combos: list[tuple[int, ...]],
+        st_coef_fid: torch.Tensor | np.ndarray,
+        std: np.ndarray | None=None,
+        color: str="桂黄",
+        n_cols: int=4,
+        J: int | None=None,
+        ylabel: str=r"$s_{1/2}$",
+        savedir: str | None=None,
+        fname: str="PhotoZ_St_coefs.pdf",
+        return_fig_ax: bool=False,
+):
+    n_combo = len(zbin_combos)
+    n_coef_per_combo = np.asarray(scoef_dict[zbin_combos[0]]).shape[1]
+
+    fig, axs, dv_length_per_combo = create_zbin_combo_subplots(
+        dv_length=n_combo * n_coef_per_combo,
+        zbin_combos=zbin_combos,
+        n_cols=n_cols,
+        ylabel=ylabel,
+        J=J,
+    )
+
+    if std is not None and st_coef_fid is not None:
+        std = np.array(std, dtype=float) / np.array(st_coef_fid, dtype=float)
+
+    for i, ax in enumerate(axs):
+        combo = zbin_combos[i]
+        fid = st_coef_fid[
+            i * n_coef_per_combo:(i + 1) * n_coef_per_combo
+        ]
+        S = np.asarray(scoef_dict[combo], dtype=float) / fid
+
+        for dz_idx in range(S.shape[0]):
+            ax.plot(
+                S[dz_idx, :],
+                linestyle="solid",
+                lw=0.5,
+                color=color,
+                alpha=1.0,
+                zorder=0,
+            )
+
+        ax.tick_params(axis="y", labelsize=8.)
+
+        if std is not None:
+            ax.fill_between(
+                x=np.arange(n_coef_per_combo),
+                y1=1 - std[i * n_coef_per_combo:(i + 1) * n_coef_per_combo],
+                y2=1 + std[i * n_coef_per_combo:(i + 1) * n_coef_per_combo],
+                color="卵白",
+                alpha=1.0,
+                zorder=-1,
+            )
+
+    if savedir is not None:
+        fig.savefig(
+            os.path.join(savedir, fname),
+            bbox_inches="tight",
+        )
+
+    if return_fig_ax:
+        return fig, axs
