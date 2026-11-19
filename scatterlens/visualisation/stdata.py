@@ -26,6 +26,7 @@ def plot_Cov(
     cax = divider.append_axes("bottom", size="4%", pad=0.08)
     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
     cbar.set_ticks([1., 0.5, 0., -0.5, -1.])
+    cbar.ax.tick_params(axis="x", labelsize=8)
 
     if zbin_combo_type_labels is not None:
         # Separate zbin_combos into auto, pairs, and 3+ bins
@@ -72,7 +73,8 @@ def plot_St_coefs(
         n_cols: int=4,
         J: int | None=None,
         ylabel: str=r"$s_{1/2}$",
-        color: str="石涅",
+        color: list[str] | str="石涅",
+        alpha: list[float] | float=0.05,
         savedir: str | None=None,
         fname: str="st_coefs.pdf",
         return_fig_ax: bool=False,
@@ -80,6 +82,16 @@ def plot_St_coefs(
     """Plot scattering coefficients from covariance training data."""
     if st_coefs.ndim == 1:
         st_coefs = st_coefs.unsqueeze(0)
+
+    if isinstance(color, str):
+        color = [color] * st_coefs.shape[0]
+    else:
+        assert len(color) == st_coefs.shape[0]
+
+    if isinstance(alpha, float):
+        alpha = [alpha] * st_coefs.shape[0]
+    else:
+        assert len(alpha) == st_coefs.shape[0]
 
     fig, axs, dv_length_per_combo = create_zbin_combo_subplots(
         dv_length=st_coefs.shape[1],
@@ -90,14 +102,14 @@ def plot_St_coefs(
     )
 
     for i, ax in enumerate(axs):
-        for st_coef in st_coefs:
+        for st_coef, c, a in zip(st_coefs, color, alpha):
             ax.plot(
                 st_coef[dv_length_per_combo * i: dv_length_per_combo * (i + 1)],
-                color=color,
+                color=c,
                 linestyle="solid",
                 zorder=0,
                 lw=0.5,
-                alpha=0.05,
+                alpha=a,
             )
 
     if savedir is not None:
@@ -314,14 +326,14 @@ def j1j2_label(j1j2_index: tuple[int, int | None]) -> str:
 def plot_IA_St_coefs(
         IA_poly_coefs: str | torch.Tensor,
         zbin_combos: list[tuple[int, ...]],
-        cmap: str="cool",
+        std=None,
         n_cols: int=4,
         J: int | None=None,
-        ylabel: str=r"$s_{1/2}$",
+        ylabel: str=r"$\mathbf{d}(A_\mathrm{IA})$",
         savedir: str | None=None,
         fname: str="IA_St_coefs.pdf",
 ):
-    A_IA_values = np.linspace(-5., 5., num=100)
+    A_IA_values = np.linspace(-6., 6., num=13)
     A_IA_range = (A_IA_values.min(), A_IA_values.max())
 
     if isinstance(IA_poly_coefs, str):
@@ -331,37 +343,56 @@ def plot_IA_St_coefs(
     degree = poly.shape[0] - 1
     X = np.vander(A_IA_values, degree + 1, increasing=False)
     model = X @ poly
-    model /= model[np.argmin(np.abs(A_IA_values))]
+    fid_idx = np.argmin(np.abs(A_IA_values))
+    fid_coef = model[fid_idx].copy()
+    model /= fid_coef
 
+    if std is not None:
+        std = np.array(std, dtype=float) / fid_coef
+
+    n_combo = len(zbin_combos)
+    n_rows = (n_combo + n_cols - 1) // n_cols
     fig, axs, _n_scoef_per_zb = create_zbin_combo_subplots(
         dv_length=model.shape[1],
         zbin_combos=zbin_combos,
         n_cols=n_cols,
+        figsize=cm2inch(median_wth, n_rows * (median_wth / n_cols) * 0.97),
         ylabel=ylabel,
         J=J,
     )
 
-    sm, colormap = get_colormap(cmap, A_IA_range)
+    colormap = sns.color_palette("flare", as_cmap=True)
+    norm = plt.Normalize(vmin=-6., vmax=6.)
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+
     add_shared_colorbar_to_figure(
         fig=fig,
         axs=axs,
         sm=sm,
         param_range=A_IA_range,
+        param_ticks=[-6, -4, -2, 0, 2, 4, 6],
         param_texlabel=r"$A_\mathrm{IA}$",
     )
 
     for i, ax in enumerate(axs):
+        if std is not None:
+            ax.fill_between(
+                x=np.arange(_n_scoef_per_zb),
+                y1=1 - std[_n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
+                y2=1 + std[_n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
+                color=sns.dark_palette("卵白", n_colors=6)[4],
+                alpha=1.0,
+                zorder=-1,
+            )
         for IA_idx, A_IA in enumerate(A_IA_values):
             ax.plot(
                 model[IA_idx, _n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
-                color=colormap(A_IA),
+                color=colormap(norm(A_IA)),
                 zorder=0,
-                linewidth=0.5,
-                alpha=0.5,
+                linewidth=1.0,
+                alpha=1.0,
             )
 
-        # ax.set_ylim(bottom=0.95, top=1.05)
-        # ax.set_yticks([0.97, 1.00, 1.03])
         ax.tick_params(axis="y", labelsize=8.)
 
     if savedir is not None:
