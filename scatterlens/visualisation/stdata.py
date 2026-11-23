@@ -1,7 +1,7 @@
 import seaborn as sns
 
 from scatterlens.visualisation.utils import *
-from scatterlens.kids1000_sims import IAMocks
+from scatterlens.kids1000_sims import IAMocks, PhotoZMocks
 
 def plot_Cov(
         cov: torch.Tensor,
@@ -214,7 +214,7 @@ def plot_IA_poly_fit(
         return_fig_ax: bool=False,
 ):
     A_IA_values = np.array(IAMocks.A_IA_values)
-    nrows = len(j1j2_indices)
+    n_rows = len(j1j2_indices)
 
     _n_scoef_per_zb = IA_scoef_tensor.shape[1] // len(IAMocks.zbin_combos)
     J = int((np.sqrt(8. * _n_scoef_per_zb + 1) - 1) / 2)
@@ -233,12 +233,12 @@ def plot_IA_poly_fit(
 
     fig, axes = plt.subplots(
         ncols=1,
-        nrows=nrows,
-        figsize=cm2inch(onecol_wth, onecol_wth * 0.65 * nrows),
+        nrows=n_rows,
+        figsize=cm2inch(onecol_wth, onecol_wth * 0.65 * n_rows),
         sharex=True,
     )
     fig.subplots_adjust(hspace=0.05)
-    if nrows == 1:
+    if n_rows == 1:
         axes = [axes]
 
     A_IA_grid = np.linspace(start=-7., stop=7., num=200)
@@ -302,7 +302,7 @@ def plot_IA_poly_fit(
                 prop={"family": "Calibri", "size": 8},
             )
 
-        if p == nrows - 1:
+        if p == n_rows - 1:
             ax.set_xlabel(r"$A_\mathrm{IA}$")
 
 
