@@ -19,6 +19,7 @@ def create_zbin_combo_subplots(
         dv_length: int,
         zbin_combos: list[tuple[int, ...]],
         n_cols: int=4,
+        figsize: tuple[float, float] | None=None,
         J: int=None,
         ylabel: str=r"$s_{1/2}$",
 ):
@@ -28,6 +29,7 @@ def create_zbin_combo_subplots(
         dv_length: Length of the data vector.
         zbin_combos: List of zbin combinations.
         n_cols: Number of columns in the subplot grid.
+        figsize: Figure size in inches.
         J: Position to separate first- and second-order scattering coefficients.
             If None, no separation line is drawn.
         ylabel: Label for the y-axis.
@@ -41,10 +43,13 @@ def create_zbin_combo_subplots(
     n_rows = (n_combo + n_cols - 1) // n_cols
     dv_length_per_combo = dv_length // n_combo # data vector length for each zbincombo
 
+    if figsize is None:
+        figsize = cm2inch(median_wth, n_rows * (median_wth / n_cols) * 0.9)
+
     fig, axs = plt.subplots(
         nrows=n_rows,
         ncols=n_cols,
-        figsize=cm2inch(median_wth, n_rows * (median_wth / n_cols) * 0.9),
+        figsize=figsize,
         sharex=True,
         sharey=True,
     )
@@ -101,6 +106,8 @@ def add_shared_colorbar_to_figure(
         axs: np.ndarray,
         sm: plt.cm.ScalarMappable,
         param_range: tuple[float, float],
+        param_ticks: list[float] | None=None,
+        param_ticklabels: list[str] | None=None,
         param_texlabel: str | None=None,
 ):
     """Add a colorbar to the figure."""
@@ -109,14 +116,17 @@ def add_shared_colorbar_to_figure(
         ax=axs,
         orientation="horizontal",
         fraction=0.03,
-        pad=0.05,
-        aspect=30,
+        pad=0.03,
+        aspect=25,
     )
-    cbar_ticks = np.linspace(param_range[0], param_range[1], num=4)
-    cbar.set_ticks(cbar_ticks)
-    cbar.set_ticklabels(
-        ticklabels=[f"{tick:.2f}" for tick in cbar_ticks], fontsize=7,
-    )
-    cbar.ax.tick_params(length=2.0)
+    if param_ticks is None:
+        param_ticks = np.linspace(param_range[0], param_range[1], num=4)
+    cbar.set_ticks(param_ticks)
+    cbar.ax.tick_params(labelsize=8)
+    if param_ticklabels:
+        cbar.set_ticklabels(
+            ticklabels=param_ticklabels, fontsize=8,
+        )
+    cbar.ax.tick_params(length=3.5)
     if param_texlabel is not None:
-        cbar.set_label(param_texlabel, fontsize=8)
+        cbar.set_label(param_texlabel, fontsize=9)
