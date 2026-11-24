@@ -1,3 +1,5 @@
+import seaborn as sns
+
 from scatterlens.visualisation.utils import *
 
 def plot_LOOCV(
@@ -139,7 +141,7 @@ def plot_StEmu_parameter_dependence(
         zbin_combos: list[tuple[int, int]],
         n_preds: int=10,
         std: np.ndarray | None=None,
-        cmap: str="viridis",
+        cmap: str | None=None,
         n_cols: int=4,
         J: int | None=None,
         ylabel: str=r"$\mathbf{d}_\mathrm{pred} / \mathbf{d}_\mathrm{fid}$",
@@ -153,6 +155,12 @@ def plot_StEmu_parameter_dependence(
     fig_list = []
     axs_list = []
 
+    if std is not None:
+        std = np.array(std, dtype=float) / np.array(fid_st_coef, dtype=float)
+
+    n_combo = len(zbin_combos)
+    n_rows = (n_combo + n_cols - 1) // n_cols
+
     for param_index, (param_name, param_texlabel, param_range) in enumerate(
             zip(param_names, param_texlabels, param_ranges)
     ):
@@ -161,27 +169,64 @@ def plot_StEmu_parameter_dependence(
             torch.broadcast_to(fid_cosmo_params, size=(n_preds, 4)))
         cosmo_params[:, param_index] = param_values
 
-        pred_st_coefs = []
-        for cosmo_param in cosmo_params:
+        model = torch.zeros(size=(len(cosmo_params), len(fid_st_coef)))
+        for i, cosmo_param in enumerate(cosmo_params):
             X = cosmo_param.unsqueeze(dim=0)
-            pred = emulator.predict(X).squeeze() / fid_st_coef
-            pred_st_coefs.append(pred)
+            model[i] = emulator.predict(X).squeeze() / fid_st_coef
 
-        fig, axs = plot_LOOCV(
-            st_deviation_list=pred_st_coefs,
+        fig, axs, _n_scoef_per_zb = create_zbin_combo_subplots(
+            dv_length=model.shape[1],
             zbin_combos=zbin_combos,
-            std=std,
-            param_values=param_values,
+            n_cols=n_cols,
+            figsize=cm2inch(median_wth, n_rows * (median_wth / n_cols) * 0.97),
+            ylabel=ylabel,
+            J=J,
+        )
+
+        colormap = sns.cubehelix_palette(as_cmap=True)
+        if cmap is not None:
+            colormap = sns.color_palette(cmap, as_cmap=True)
+        norm = plt.Normalize(vmin=param_range[0], vmax=param_range[1])
+        sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+
+        add_shared_colorbar_to_figure(
+            fig=fig,
+            axs=axs,
+            sm=sm,
             param_range=param_range,
             param_texlabel=param_texlabel,
-            cmap=cmap,
-            n_cols=n_cols,
-            J=J,
-            ylabel=ylabel,
-            savedir=savedir,
-            fname=fname.format(param_name),
-            return_fig_ax=True,
         )
+
+        for i, ax in enumerate(axs):
+            if std is not None:
+                ax.fill_between(
+                    x=np.arange(_n_scoef_per_zb),
+                    y1=1 - std[_n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
+                    y2=1 + std[_n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)],
+                    color=sns.dark_palette("卵白", n_colors=6)[4],
+                    alpha=1.0,
+                    zorder=-1,
+                )
+            for p_idx, param_value in enumerate(param_values):
+                ax.plot(
+                    model[
+                        p_idx,
+                        _n_scoef_per_zb * i: _n_scoef_per_zb * (i + 1)
+                    ],
+                    color=colormap(norm(param_value)),
+                    zorder=0,
+                    linewidth=1.0,
+                    alpha=1.0,
+                )
+
+            ax.tick_params(axis="y", labelsize=8.)
+
+        if savedir is not None:
+            fig.savefig(
+                os.path.join(savedir, fname.format(param_name)),
+                bbox_inches="tight",
+            )
+
         fig_list.append(fig)
         axs_list.append(axs)
 
