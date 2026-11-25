@@ -87,7 +87,7 @@ def plot_LOOCV(
                         ],
                         linestyle="solid",
                         lw=2.0,
-                        color="胆矾",
+                        color="鸦青",
                         alpha=1.0,
                         zorder=1,
                     )
@@ -98,8 +98,8 @@ def plot_LOOCV(
                         ],
                         linestyle="solid",
                         lw=0.9,
-                        color="桂黄",
-                        alpha=0.7,
+                        color="姚黄",
+                        alpha=0.9,
                         zorder=0,
                     )
 
@@ -116,7 +116,7 @@ def plot_LOOCV(
                     y2=1 + std[
                         dv_length_per_combo * i: dv_length_per_combo * (i + 1)
                     ],
-                    color="卵白",
+                    color=sns.dark_palette("卵白", n_colors=6)[4],
                     alpha=1.0,
                     zorder=-1,
                 )
